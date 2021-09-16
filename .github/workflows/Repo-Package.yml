@@ -33,7 +33,7 @@ jobs:
 
     - name: Trigger matrix Update
       run: |
-        gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+        gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/small-package/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
         gitdate=$(date -d "$gitdate" +%s)
         now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
         if [[ $(expr $gitdate + 90000) < $now ]]; then
@@ -44,13 +44,3 @@ jobs:
         -H "Accept: application/vnd.github.everest-preview+json" \
         -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
         -d '{"event_type": "x86_64 ${{ env.SSH }}", "client_payload": {"target": "x86_64"}}'
-        curl \
-        -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-        -H "Accept: application/vnd.github.everest-preview+json" \
-        -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-        -d '{"event_type": "aarch64_generic ${{ env.SSH }}", "client_payload": {"target": "nanopi-r2s"}}'
-        curl \
-         -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-         -H "Accept: application/vnd.github.everest-preview+json" \
-         -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-         -d '{"event_type": "aarch64_cortex-a72 ${{ env.SSH }}", "client_payload": {"target": "Rpi-4B"}}'
