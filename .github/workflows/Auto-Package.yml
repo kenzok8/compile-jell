@@ -158,7 +158,7 @@ jobs:
         mv -f feeds/packages/lang feeds/packages/lang.b
         mv -f feeds/packages feeds/packages.b
         mkdir package/feeds/custom
-        mv -f custom.b/{wxbase,lib*,rapidjson,jpcre2,quickjspp,qtbase,qttools,rblibtorrent} package/feeds/custom/
+        mv -f custom.b/ package/feeds/custom/
 
     - name: Compile the firmware
       run: |
