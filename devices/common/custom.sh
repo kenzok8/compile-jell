@@ -25,7 +25,7 @@ rm -Rf feeds/base/package/system/!(opkg|ubus|uci)
 
 ./scripts/feeds update -a
 ./scripts/feeds install -a
-
+sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/custom/luci-*/luasrc/controller/* -name "*.lua"`
 sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/custom/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
 sed -i 's/Os/O2/g' include/target.mk
 #rm -rf ./feeds/packages/lang/golang
@@ -36,14 +36,8 @@ sed -i \
 	-e "s/+nginx\( \|$\)/+nginx-ssl\1/" \
 	-e 's/+python\( \|$\)/+python3/' \
 	-e 's?../../lang?$(TOPDIR)/feeds/packages/lang?' \
+	-e 's,$(STAGING_DIR_HOST)/bin/upx,upx,' \
 	package/feeds/custom/*/Makefile
-
-for ipk in $(ls -d ./feeds/custom/*);do
-	if [[ ! -d "$ipk/patches" ]]; then
-		sed -i "s/PKG_SOURCE_VERSION:=[0-9a-z]\{7,\}/PKG_SOURCE_VERSION:=HEAD/g" !(luci-*|rblibtorrent|n2n_v2)/Makefile
-	fi
-done
-sed -i 's/$(VERSION) &&/$(VERSION) ;/g' include/download.mk
 
 cp -f devices/common/.config .config
 mv feeds/base feeds/base.bak
@@ -66,4 +60,3 @@ fi
 ln -sf /usr/bin/python3 staging_dir/host/bin/python3
 cp -f devices/common/po2lmo staging_dir/host/bin/po2lmo
 chmod +x staging_dir/host/bin/po2lmo
-sed -i 's,$(STAGING_DIR_HOST)/bin/upx,upx,' package/feeds/custom/*/Makefile
