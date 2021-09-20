@@ -132,7 +132,7 @@ jobs:
         rm -Rf sdk.tar.xz
         cd openwrt
         cp -rf ./openwrt-sdk*/. ./ || true
-        svn export https://github.com/kenzok8/jell/trunk/devices
+        svn export https://github.com/kenzok78/compile-small/trunk/devices
         cp -rf ../devices ./
         cp -rf devices/common/. ./
         cp -rf devices/${{matrix.target}}/. ./
