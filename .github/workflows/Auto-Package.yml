@@ -6,7 +6,7 @@
 # Blog: https://p3terx.com
 #=================================================
 
-name: Packages-AutoBuild
+name: Auto-Packages
 
 on: 
   repository_dispatch:
