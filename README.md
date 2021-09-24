@@ -25,7 +25,7 @@
 [![garypang13](https://img.shields.io/badge/autoBuild-garypang13-red.svg?style=flat&logo=appveyor)](https://github.com/garypang13/small-compile)
 
 ##### 插件每日更新下载:
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/kenzok78/compile-small?style=for-the-badge&label=small-package插件更新下载)](https://github.com/kenzok78/compile-small/releases/latest)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/kenzok78/compile-small?style=for-the-badge&label=插件更新下载)](https://github.com/kenzok78/compile-small/releases/latest)
 
 ##### 特色:
 
