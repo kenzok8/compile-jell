@@ -98,7 +98,7 @@ jobs:
     - name: Get current date
       id: date
       run: |
-        echo "date=$(date +'%m/%d_%Y_%H/%M')" >> $GITHUB_ENV
+        echo "date1=$(date +'%m/%d_%Y_%H/%M')" >> $GITHUB_ENV
         echo "date2=$(date +'%m/%d %Y')" >> $GITHUB_ENV
         echo "date3=$(date +'%m.%d')" >> $GITHUB_ENV
 
@@ -146,20 +146,14 @@ jobs:
           cat devices/${{matrix.target}}/.config >> .config
         fi
         cp -Rf ./diy/* ./ || true
-        #if [[ ${{github.actor}} == "kiddin9" ]]; then
-          #sed -i "s/index()/index()\nif luci.sys.exec(\"cat \/etc\/openwrt_release | grep -o -E ^DISTRIB_DESCRIPTION='.*(kenzok8|kenzok78)'\") == \"\" then return end/g" package/feeds/custom/luci-app*/luasrc/controller/*.lua
-        #fi
 
     - name: Apply patches
       run: |
         cd openwrt
-        find "devices/common/patches" -type f ! -path 'devices/common/patches/china_mirrors.patch' -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
+        find "devices/common/patches" -type f ! -path 'devices/common/patches/china_mirrors.patch' -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" || true
         if [ -n "$(ls -A "devices/${{matrix.target}}/patches" 2>/dev/null)" ]; then
-          find "devices/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
+          find "devices/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" || true
         fi
-        svn export --force https://github.com/kiddin9/OpenWrt_x86-r2s-r4s/trunk/devices/common/patches patches
-        svn export --force https://github.com/kiddin9/OpenWrt_x86-r2s-r4s/trunk/devices/${{matrix.target}}/patches patches >/dev/null 2>&1 || true
-        find "patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" >/dev/null 2>&1 || true
       
     - name: SSH connection to Actions
       uses: kenzok78/debugger-action@master
@@ -270,7 +264,7 @@ jobs:
             ${{ env.FIRMWARE }}/*
             openwrt/error*.log
         name: ${{ env.NAME }}
-        tag_name: ${{ env.date }}_${{ env.MTARGET }}
+        tag_name: ${{ env.date1 }}_${{ env.MTARGET }}
         body_path: release.txt
 
     - name: Upload packages for artifact
