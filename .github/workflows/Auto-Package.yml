@@ -291,7 +291,7 @@ jobs:
         REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
         REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
         REMOTE_USER: root
-        TARGET: "/www/wwwroot/op.dllkids.xyz/packages/${{ env.MTARGET }}/"
+        TARGET: "/www/wwwroot/op.dllkids.xyz/package/${{ env.MTARGET }}/"
 
     - name: remote ssh command
       uses: appleboy/ssh-action@master
