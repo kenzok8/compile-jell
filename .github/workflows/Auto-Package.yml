@@ -288,8 +288,8 @@ jobs:
         SSH_PRIVATE_KEY: ${{ env.SSH_PRIVATE_KEY }}
         ARGS: "-avzr"
         SOURCE: "packages/"
-        REMOTE_HOST: op.dllkids.xyz
-        REMOTE_PORT: 2222
+        REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+        REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
         REMOTE_USER: root
         TARGET: "/www/wwwroot/op.dllkids.xyz/packages/${{ env.MTARGET }}/"
 
