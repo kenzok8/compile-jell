@@ -44,4 +44,30 @@ jobs:
         -H "Accept: application/vnd.github.everest-preview+json" \
         -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
         -d '{"event_type": "x86_64", "client_payload": {"target": "x86_64"}}'
+        curl \
+        -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
+        -H "Accept: application/vnd.github.everest-preview+json" \
+        -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
+        -d '{"event_type": "aarch64_generic", "client_payload": {"target": "nanopi-r2s"}}'
+        curl \
+         -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
+         -H "Accept: application/vnd.github.everest-preview+json" \
+         -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
+         -d '{"event_type": "aarch64_cortex-a72", "client_payload": {"target": "Rpi-4B"}}'
+  
+    - name: Delete workflow runs
+      uses: GitRML/delete-workflow-runs@main
+      continue-on-error: true
+      with:
+        retain_days: 1
+        keep_minimum_runs: 0
 
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@master
+      continue-on-error: true
+      if: env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 2
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}    
