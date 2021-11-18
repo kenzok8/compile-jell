@@ -291,7 +291,7 @@ jobs:
         REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
         REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
         REMOTE_USER: root
-        TARGET: "/www/wwwroot/op.dllkids.xyz/packages/${{ env.MTARGET }}/"
+        TARGET: "/www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{ env.MTARGET }}/"
 
     - name: remote ssh command
       uses: appleboy/ssh-action@master
@@ -302,8 +302,8 @@ jobs:
         username: root
         key: ${{ env.SSH_PRIVATE_KEY }}
         script: |
-          # cp -R /www/wwwroot/op.supes.top/packages/keep/common/* /www/wwwroot/op.supes.top/packages/${{ env.MTARGET }}/
-          # cp -R /www/wwwroot/op.supes.top/packages/keep/${{ env.MTARGET }}/* /www/wwwroot/op.supes.top/packages/${{ env.MTARGET }}/
+          # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/common/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{ env.MTARGET }}/
+          # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/${{ env.MTARGET }}/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{ env.MTARGET }}/
           opkg ${{ env.MTARGET }}
 
     - name: WeChat notification
@@ -333,4 +333,3 @@ jobs:
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-
