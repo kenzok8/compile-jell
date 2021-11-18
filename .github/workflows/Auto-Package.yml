@@ -254,7 +254,7 @@ jobs:
       continue-on-error: true
       run: |
         echo -e "定时更新插件，推送发布 🎈:\n" >> release.txt
-        echo -e "[腾讯云] (https://op.dllkids.xyz/packages/${{ env.MTARGET }}/ ☁)\n" >> release.txt
+        echo -e "[kenzo] (https://op.dllkids.xyz/package/${{ env.MTARGET }}/ ☁)\n" >> release.txt
         [ ${{ env.WETRANS }} ] && echo -e "[WeTransfer] (${{ env.WETRANS }} 🗽)\n" >> release.txt
         [ ${{ env.COWURL }} ] && echo -e "[奶牛上传] (${{ env.COWURL }} 🐮)\n" >> release.txt
         [ ${{ env.NOTICE }} ] && echo -e "${{ env.NOTICE }}" >> release.txt || true
