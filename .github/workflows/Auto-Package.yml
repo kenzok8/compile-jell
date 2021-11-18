@@ -297,9 +297,10 @@ jobs:
       uses: appleboy/ssh-action@master
       if: env.SSH_PRIVATE_KEY && ! contains(github.event.action, 'noser')
       with:
-        host: op.dllkids.xyz
+        host: ${{ secrets.REMOTE_HOST }}
         username: root
         key: ${{ env.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.REMOTE_PORT }}
         script: |
           # cp -R /www/wwwroot/op.dllkids.xyz/packages/keep/common/* /www/wwwroot/op.dllkids.xyz/packages/${{ env.MTARGET }}/
           # cp -R /www/wwwroot/op.dllkids.xyz/packages/keep/${{ env.MTARGET }}/* /www/wwwroot/op.dllkids.xyz/packages/${{ env.MTARGET }}/
