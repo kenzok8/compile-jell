@@ -3,7 +3,7 @@
 shopt -s extglob
 sed -i '/	refresh_config();/d' scripts/feeds
 ./scripts/feeds update -a
-rm -rf feeds/custom/{.github,diy,mt-drivers,miniupnpd,shortcut-fe,luci-app-mtwifi,mtk_apcli,.gitignore,LICENSE,README.md}
+rm -rf feeds/custom/{.github,diy,mt-drivers,miniupnpd,shortcut-fe,luci-app-mtwifi,luci-app-mtwifi,luci-app-easymesh,mtk_apcli,.gitignore,LICENSE,README.md}
 
 for ipk in $(ls -d ./feeds/custom/*);
 do
