@@ -304,19 +304,6 @@ jobs:
         REMOTE_USER: root
         TARGET: "/www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{ env.MTARGET }}/"
 
-    - name: remote ssh command
-      uses: appleboy/ssh-action@master
-      if: env.SSH_PRIVATE_KEY && ! contains(github.event.action, 'noser')
-      with:
-        host: ${{ secrets.REMOTE_HOST }}
-        port: ${{ secrets.REMOTE_PORT }}
-        username: root
-        key: ${{ env.SSH_PRIVATE_KEY }}
-        script: |
-          # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/common/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{ env.MTARGET }}/
-          # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/${{ env.MTARGET }}/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{ env.MTARGET }}/
-          opkg ${{ env.MTARGET }} &
-
     - name: WeChat notification
       continue-on-error: true
       if: env.SCKEY
