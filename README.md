@@ -29,6 +29,6 @@
 
 ##### 特色:
 
-+ openwrt下small-package包插件x86编译.
++ openwrt下jell包插件编译.
 
 
