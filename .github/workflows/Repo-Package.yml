@@ -31,6 +31,12 @@ jobs:
   build:
     runs-on: Ubuntu-20.04
     steps:
+    - name: cancel running workflows
+      uses: styfle/cancel-workflow-action@main
+      with:
+        workflow_id: Auto-Package.yml,Repo-Package.yml
+        access_token: ${{ github.token }}
+
     - name: Trigger matrix Update
       run: |
         if [[ ! "${{ github.event.inputs.packages }}" ]]; then
