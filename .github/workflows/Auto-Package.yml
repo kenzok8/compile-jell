@@ -187,7 +187,7 @@ jobs:
           fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(aarch64_generic\|x86_64\|aarch64_cortex-a72\|nanopi-r2s\|Rpi-4B\|N1\|ac2100\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
           during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
           function comp(){
-             cp -rf jell.b/$ipk package/feedsjell/
+             cp -rf jell.b/$ipk package/feeds/jell/
              if [[ $ipk != luci-* ]]; then
               mv -f feeds/packages.b feeds/packages
               [ "$(grep -E "(PKG_BUILD_DEPENDS|packages/lang|meson.mk)" package/feeds/jell/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
