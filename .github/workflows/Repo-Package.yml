@@ -13,7 +13,7 @@ on:
   #   branches:
   #     - master
   schedule:
-    - cron: 30 2 * * *
+    - cron: 30 15 * * *
   watch:
     types: started
   workflow_dispatch:
@@ -29,39 +29,25 @@ env:
 
 jobs:
   build:
+    if: github.event.repository.owner.id == github.event.sender.id
     runs-on: Ubuntu-20.04
     steps:
-    - name: cancel running workflows
-      uses: styfle/cancel-workflow-action@main
-      with:
-        workflow_id: Auto-Package.yml,Repo-Package.yml
-        access_token: ${{ github.token }}
-
     - name: Trigger matrix Update
       run: |
-        if [[ ! "${{ github.event.inputs.packages }}" ]]; then
-          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+        gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/kiddin9/openwrt-packages/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+        fpkg="$(echo "${{github.event.inputs.packages}}" | sed -e 's/\(aarch64_generic\|x86_64\|aarch64_cortex-a72\|nanopi-r2s\|Rpi-4B\|N1\|ac2100\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
+        during="$(echo "${{github.event.inputs.packages}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
+        [[ "$fpkg" && ! "$during" ]] || {
+          [ "$during" ] || during="1.05"
+          durings=`echo "$during*60*60*24" | bc`
           gitdate=$(date -d "$gitdate" +%s)
-          now=$(date -d "$(date '+%m-%d" "%H:%M')" +%s)
-          if [[ $(expr $gitdate + 90000) < $now ]]; then
+          now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
+          [ "$during" ] || during="1.05"
+          durings=`echo "$during*60*60*24" | bc`
+          if [[ $(expr $gitdate + ${durings%.*}) -lt $now ]]; then
             exit;
           fi
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "x86_64", "client_payload": {"target": "x86_64"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "aarch64_generic", "client_payload": {"target": "nanopi-r2s"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "aarch64_cortex-a72", "client_payload": {"target": "Rpi-4B"}}'
-        else
+        }
           curl \
           -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
