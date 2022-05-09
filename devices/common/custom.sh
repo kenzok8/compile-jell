@@ -21,7 +21,7 @@ rm -Rf feeds/base/package/network/!(services|utils)
 rm -Rf feeds/base/package/network/services/!(ppp)
 rm -Rf feeds/base/package/network/utils/!(iwinfo|iptables)
 rm -Rf feeds/base/package/utils/!(util-linux|lua)
-rm -Rf feeds/base/package/system/!(opkg|ubus|uci)
+rm -Rf feeds/base/package/system/!(opkg|ubus|uci|ca-certificates)
 
 ./scripts/feeds update -a
 ./scripts/feeds install -a -p jell
@@ -44,7 +44,7 @@ sed -i \
 	-e 's,$(STAGING_DIR_HOST)/bin/upx,upx,' \
 	package/feeds/jell/*/Makefile
 
-date=`date +%m.%d`
+date=`date +%m.%d.%Y`
 sed -i -e "/\(# \)\?REVISION:=/c\REVISION:=$date" -e '/VERSION_CODE:=/c\VERSION_CODE:=$(REVISION)' include/version.mk
 
 cp -f devices/common/.config .config
