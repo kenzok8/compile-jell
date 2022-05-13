@@ -74,7 +74,7 @@ jobs:
         curl -X POST https://api.github.com/repos/kenzok78/jell/dispatches \
         -H "Accept: application/vnd.github.everest-preview+json" \
         -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-        --data '{"event_type": "update"}'
+        --data '{"event_type": "update compile"}'
         fi
 
     - name: Initialization environment
