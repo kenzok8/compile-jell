@@ -8,7 +8,7 @@ do
 	[[ "$(grep "KernelPackage" "$ipk/Makefile")" && ! "$(grep "BuildPackage" "$ipk/Makefile")" ]] && rm -rf $ipk || true
 done
 
-rm -rf package/{base-files,network/config/firewall,network/services/dnsmasq,network/services/ppp,system/opkg,libs/mbedtls}
+#<<'COMMENT'
 rm -Rf feeds/luci/{applications,collections,protocols,themes,libs,docs,contrib}
 rm -Rf feeds/luci/modules/!(luci-base)
 # rm -rf feeds/packages/libs/!(libev|c-ares|cjson|boost|lib*|expat|tiff|freetype|udns|pcre2)
@@ -16,19 +16,21 @@ rm -Rf feeds/packages/!(lang|libs|devel|utils|net|multimedia)
 rm -Rf feeds/packages/multimedia/!(gstreamer1)
 rm -Rf feeds/packages/utils/!(pcsc-lite|xz)
 rm -Rf feeds/packages/net/!(mosquitto|curl)
-rm -Rf feeds/base/package/{kernel,firmware}
+rm -Rf feeds/base/package/{firmware}
 rm -Rf feeds/base/package/network/!(services|utils)
 rm -Rf feeds/base/package/network/services/!(ppp)
 rm -Rf feeds/base/package/network/utils/!(iwinfo|iptables)
 rm -Rf feeds/base/package/utils/!(util-linux|lua)
 rm -Rf feeds/base/package/system/!(opkg|ubus|uci|ca-certificates)
+rm -Rf feeds/base/package/kernel/!(cryptodev-linux)
+#COMMENT
 
 ./scripts/feeds update -a
-./scripts/feeds install -a -p jell
+./scripts/feeds install -a -p jell -f
 ./scripts/feeds install -a
 
 sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/jell/luci-*/luasrc/controller/* -name "*.lua"`
-sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/jell/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
+# sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/jell/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
 sed -i 's/Os/O2/g' include/target.mk
 #rm -rf ./feeds/packages/lang/golang
 #svn co https://github.com/immortalwrt/packages/trunk/lang/golang feeds/packages/lang/golang
