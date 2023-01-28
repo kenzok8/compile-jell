@@ -41,7 +41,7 @@ jobs:
         
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@main
       with:
         fetch-depth: 0
 
@@ -314,7 +314,7 @@ jobs:
           opkg ${{matrix.target}} &
 
     - name: Delete workflow runs
-      uses: GitRML/delete-workflow-runs@main
+      uses: Mattraks/delete-workflow-runs@main
       continue-on-error: true
       with:
         retain_days: 20
