@@ -232,7 +232,7 @@ jobs:
         if [[ $(ls -l openwrt/error* | grep "^-" | wc -l) -le 0 ]]; then
            echo "NAME=${Emoji[$[$RANDOM % ${#Emoji[@]}]]} ${{ env.date2 }} ${{matrix.target}} ${{ env.EMOJI }}" >> $GITHUB_ENV
         else
-           echo "NAME=❌ ${{ env.date2 }} ${{matrix.target}} ❌" >> $GITHUB_ENV
+           echo "NAME=🔥 ${{ env.date2 }} ${{matrix.target}} 🔥" >> $GITHUB_ENV
         fi
 
     - name: Upload firmware to cowtransfer
@@ -261,7 +261,7 @@ jobs:
       continue-on-error: true
       run: |
         echo -e "定时更新插件，推送发布 🎈:\n" >> release.txt
-        echo -e "[kenzos://${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/ ☁)\n" >> release.txt
+        echo -e "[kenzo] (https://${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/)\n" >> release.txt
         [ ${{ env.WETRANS }} ] && echo -e "[WeTransfer] (${{ env.WETRANS }} 🗽)\n" >> release.txt
         [ ${{ env.COWURL }} ] && echo -e "[奶牛上传] (${{ env.COWURL }} 🐮)\n" >> release.txt
         [ ${{ env.NOTICE }} ] && echo -e "${{ env.NOTICE }}" >> release.txt || true
