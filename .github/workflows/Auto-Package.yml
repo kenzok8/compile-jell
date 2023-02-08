@@ -72,11 +72,11 @@ jobs:
         gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/actions/runs" | jq -r '.workflow_runs[0].created_at')
         gitdate=$(date -d "$gitdate" +%s)
         now=$(date -d "$(date)" +%s)
-        if [[ $(expr $gitdate + 120) < $now ]]; then
+        if [[ $(expr $gitdate + 180) < $now ]]; then
         curl -X POST https://api.github.com/repos/kenzok8/jell/dispatches \
         -H "Accept: application/vnd.github.everest-preview+json" \
         -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-        --data '{"event_type": "update"}'
+        --data '{"event_type": "repo jell"}'
         fi
 
     - name: Initialization environment
@@ -261,7 +261,7 @@ jobs:
       continue-on-error: true
       run: |
         echo -e "定时更新插件，推送发布 🎈:\n" >> release.txt
-        echo -e "[kenzo] (https://${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/)\n" >> release.txt
+        echo -e "[下载链接] (https://${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/)\n" >> release.txt
         [ ${{ env.WETRANS }} ] && echo -e "[WeTransfer] (${{ env.WETRANS }} 🗽)\n" >> release.txt
         [ ${{ env.COWURL }} ] && echo -e "[奶牛上传] (${{ env.COWURL }} 🐮)\n" >> release.txt
         [ ${{ env.NOTICE }} ] && echo -e "${{ env.NOTICE }}" >> release.txt || true
