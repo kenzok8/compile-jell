@@ -308,11 +308,11 @@ jobs:
         host: ${{ secrets.REMOTE_HOST }}
         port: ${{ secrets.REMOTE_PORT }}
         username: root
-        password: ${{ secrets.PASSWORD }}
+        key: ${{ env.SSH_PRIVATE_KEY }}
         script: |
           # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/common/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/
           # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/${{matrix.target}}/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/
-          opkg ${{matrix.target}} &
+          bash opkg ${{matrix.target}} &
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@main
