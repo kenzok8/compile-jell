@@ -24,7 +24,7 @@ on:
         default: ''
 
 env:
-  REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
+  REPO_TOKEN: ${{ secrets.TOKEN_KENZO }}
   TZ: Asia/Shanghai
 
 jobs:
@@ -155,4 +155,4 @@ jobs:
         keep_latest: 30
         delete_tags: true
       env:
-        GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.TOKEN_KENZO }}

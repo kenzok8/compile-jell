@@ -17,7 +17,6 @@ on:
   #   - cron: 0 1 */1 * *
 
 env:
-  REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
   PPPOE_USERNAME: ${{ secrets.PPPOE_USERNAME }}
   PPPOE_PASSWD: ${{ secrets.PPPOE_PASSWD }}
   SCKEY: ${{ secrets.SCKEY }}
@@ -67,6 +66,11 @@ jobs:
         echo "UPLOAD_FIRMWARE_FOR_RELEASE=${UPLOAD_FIRMWARE_FOR_RELEASE}" >> $GITHUB_ENV
         echo "UPLOAD_FIRMWARE_TO_COWTRANSFER=${UPLOAD_FIRMWARE_TO_COWTRANSFER}" >> $GITHUB_ENV
         echo "UPLOAD_FIRMWARE_TO_WETRANSFER=${UPLOAD_FIRMWARE_TO_WETRANSFER}" >> $GITHUB_ENV
+        if [[ "${{matrix.target}}" == arm_* ]]; then
+        echo "REPO_TOKEN=${{ secrets.TOKEN_KENZO7 }}" >> $GITHUB_ENV
+        else
+        echo "REPO_TOKEN=${{ secrets.TOKEN_KENZO8 }}" >> $GITHUB_ENV
+        fi
         sed -i "1a REPO_TOKEN=${{ env.REPO_TOKEN }}" ${GITHUB_WORKSPACE}/devices/common/custom.sh
 
     - name: Trigger Packages Update
@@ -298,7 +302,7 @@ jobs:
       continue-on-error: true
       if: env.REPO_TOKEN && env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true'
       env:
-        GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.TOKEN_KENZO }}
       with:
         files: |
             packages/*
