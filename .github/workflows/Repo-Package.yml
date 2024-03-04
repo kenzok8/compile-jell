@@ -24,7 +24,7 @@ on:
         default: ''
 
 env:
-  REPO_TOKEN: ${{ secrets.TOKEN_KENZO }}
+  REPO_TOKEN: ${{ secrets.TOKEN_kenzo }}
   TZ: Asia/Shanghai
 
 jobs:
@@ -134,17 +134,12 @@ jobs:
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ env.REPO_TOKEN }}" \
           -d '{"event_type": "arm_cortex-a15_neon-vfpv4 ${{ github.event.inputs.packages }}", "client_payload": {"target": "arm_cortex-a15_neon-vfpv4"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ env.REPO_TOKEN }}" \
-          -d '{"event_type": "arm_xscale ${{ github.event.inputs.packages }}", "client_payload": {"target": "arm_xscale"}}'
        
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@main
       continue-on-error: true
       with:
-        retain_days: 1
+        retain_days: 5
         keep_minimum_runs: 1
 
     - name: Remove old Releases
@@ -155,4 +150,4 @@ jobs:
         keep_latest: 30
         delete_tags: true
       env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN_KENZO }}
+        GITHUB_TOKEN: ${{ secrets.TOKEN_kenzo }}

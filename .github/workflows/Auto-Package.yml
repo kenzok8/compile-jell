@@ -45,13 +45,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: cancel running workflows
-      uses: styfle/cancel-workflow-action@main
-      if: contains(github.event.action, 'cw')
-      with:
-        workflow_id: 13249160
-        access_token: ${{ github.token }}
-
     - name: Load Settings.ini
       run: |
         source "${GITHUB_WORKSPACE}/devices/common/settings.ini"
@@ -138,8 +131,6 @@ jobs:
             curl -fL -m 500 -o sdk.tar.xz https://downloads.openwrt.org/releases/$REPO_BRANCH/targets/bcm53xx/generic/openwrt-sdk-$REPO_BRANCH-bcm53xx-generic_gcc-12.3.0_musl_eabi.Linux-x86_64.tar.xz || curl -fL -m 500 -o sdk.tar.xz https://downloads.cdn.openwrt.org/releases/$REPO_BRANCH/targets/bcm53xx/generic/openwrt-sdk-$REPO_BRANCH-bcm53xx-generic_gcc-12.3.0_musl_eabi.Linux-x86_64.tar.xz
         elif [[ ${{matrix.target}} == "arm_cortex-a9_vfpv3-d16" ]]; then
             curl -fL -m 500 -o sdk.tar.xz https://downloads.openwrt.org/releases/$REPO_BRANCH/targets/mvebu/cortexa9/openwrt-sdk-$REPO_BRANCH-mvebu-cortexa9_gcc-12.3.0_musl_eabi.Linux-x86_64.tar.xz || curl -fL -m 500 -o sdk.tar.xz https://downloads.cdn.openwrt.org/releases/$REPO_BRANCH/targets/mvebu/cortexa9/openwrt-sdk-$REPO_BRANCH-mvebu-cortexa9_gcc-12.3.0_musl_eabi.Linux-x86_64.tar.xz
-        elif [[ ${{matrix.target}} == "arm_xscale" ]]; then
-            curl -fL -m 500 -o sdk.tar.xz https://downloads.openwrt.org/releases/$REPO_BRANCH/targets/kirkwood/generic/openwrt-sdk-$REPO_BRANCH-kirkwood-generic_gcc-12.3.0_musl_eabi.Linux-x86_64.tar.xz || curl -fL -m 500 -o sdk.tar.xz https://downloads.cdn.openwrt.org/releases/$REPO_BRANCH/targets/kirkwood/generic/openwrt-sdk-$REPO_BRANCH-kirkwood-generic_gcc-12.3.0_musl_eabi.Linux-x86_64.tar.xz
         fi
 
     - name: Free up disk space
@@ -213,13 +204,14 @@ jobs:
           fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(aarch64_generic\|x86_64\|i386_pentium4\|arm_arm1176jzf-s_vfp\|aarch64_cortex-a72\|arm_cortex-a7\|arm_cortex-a7_neon-vfpv4\|arm_cortex-a9\|arm_cortex-a15_neon-vfpv4\|arm_cortex-a5_vfpv4\|mipsel_24kc\|mips_24kc\|aarch64_cortex-a53\|arm_xscale\|arm_cortex-a9_vfpv3-d16\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
           during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
           function comp(){
+             echo "compile $ipk"
              cp -rf jell.b/$ipk package/feeds/jell/
              if [[ $ipk != luci-* ]]; then
               mv -f feeds/packages.b feeds/packages
               mv feeds/packages/lang.b feeds/packages/lang
-              [ "$(grep "node" package/feeds/jell/$ipk/Makefile)" ] || mv feeds/packages/lang/node feeds/packages/lang/node.b
+              [ "$(grep "PKG_BUILD_DEPENDS" package/feeds/jell/$ipk/Makefile)" ] || mv feeds/packages/lang/node feeds/packages/lang/node.b
              fi
-             make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
+             (make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s 2>&1 | tee error_$ipk.log | grep -i "Error 2" || rm -rf error_$ipk.log) || true
              if [[ $ipk != luci-* ]]; then
               mv -f feeds/packages/lang feeds/packages/lang.b 2>/dev/null || true
               mv -f feeds/packages/lang.b/node.b feeds/packages/lang.b/node 2>/dev/null || true
@@ -232,18 +224,25 @@ jobs:
             if [[ "$fpkg" && ! "$during" ]]; then
               comp
             else
-              gitdate=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/commits?path=$ipk&per_page=1" | jq -r '.[0].commit.committer.date')
-              if [ "$gitdate" != "null" ]; then
-                gitdate=$(date -d "$gitdate" +%s)
-                now=$(date -d "$(date)" +%s)
+              gitdate="$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/commits?path=$ipk&per_page=1" | jq -r '.[0].commit.committer.date')" || true
+              if [[ "$gitdate" && "$gitdate" != null ]]; then
+                gitdate="$(date -d "$gitdate" +%s)"
+                now="$(date -d "$(date)" +%s)"
                 [ "$during" ] || during="1.05"
                 durings=`echo "$during*60*60*24" | bc`
-                if [[ $gitdate != "null" && $(($gitdate + ${durings%.*})) -gt $now ]]; then
-                  comp
+                if [[ $(($gitdate + ${durings%.*})) -gt $now && $ipk != luci-base && $ipk != luci-mod-* ]]; then
+                  echo "$((($now - $gitdate)/60/60))" || true
+                  echo "$ipk" >> ipk.txt
                 fi
               fi
             fi
           done
+          if [ -f ipk.txt ]; then
+              for ipk in $(cat ipk.txt)
+              do
+                comp
+              done
+          fi
         echo "status=success" >> $GITHUB_ENV
 
     - name: Check space usage
@@ -255,7 +254,6 @@ jobs:
         mkdir packages
         mv -f openwrt/bin/packages/*/jell/* packages || true
         mv -f openwrt/.config packages/${{matrix.target}}.config || true
-        mv -f openwrt/bin/targets/*/*/packages/base-files* packages/ || true
         # cp -Rf openwrt/bin/packages/*/packages/python3* packages/
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV
         Emoji=("⛅" "🌈" "🔥" "🍂" "🌸" "🐌" "🌿" "🐤" "💦" "💤" "💭" "🍭" "🎉" "🤞" "✨" "🎁" "🎈" "🐾" "🎨" "💋" "🍓" "🍕" "🍉" "💐" "🌴" "🙈" "🤡" "🍡")
@@ -263,7 +261,7 @@ jobs:
         if [[ $(ls -l openwrt/error* | grep "^-" | wc -l) -le 0 ]]; then
            echo "NAME=${Emoji[$[$RANDOM % ${#Emoji[@]}]]} ${{ env.date2 }} ${{matrix.target}} ${{ env.EMOJI }}" >> $GITHUB_ENV
         else
-           echo "NAME=🔥 ${{ env.date2 }} ${{matrix.target}} 🔥" >> $GITHUB_ENV
+           echo "NAME=🌸 ${{ env.date2 }} ${{matrix.target}} 🌸" >> $GITHUB_ENV
         fi
 
     - name: Upload firmware to cowtransfer
@@ -274,7 +272,7 @@ jobs:
         cowurl=$(./transfer cow --block 2621440 -s --no-progress ${FIRMWARE})
         cowurl=$(echo $cowurl | grep -o -E "https[^ ]*")
         echo "COWURL=$cowurl" >> $GITHUB_ENV
-        echo "Download Link: ${{ env.EMOJI }} $cowurl ${{ env.EMOJI }} 🚀"
+        echo "Download Link: ${{ env.EMOJI }} $cowurl ${{ env.EMOJI }} 💤"
  
     - name: Upload firmware to WeTransfer
       if: env.UPLOAD_FIRMWARE_TO_WETRANSFER == 'true'
@@ -284,7 +282,7 @@ jobs:
         wetrans=$(./transfer wet -s -p 16 --no-progress ${FIRMWARE})
         wetrans=$(echo $wetrans | grep -o -E "https[^ ]*")
         echo "WETRANS=$wetrans" >> $GITHUB_ENV
-        echo "Download Link: ${{ env.EMOJI }} $wetrans ${{ env.EMOJI }} 🚀"
+        echo "Download Link: ${{ env.EMOJI }} $wetrans ${{ env.EMOJI }} 💤"
         
     - name: Create release
       id: create_release
@@ -342,5 +340,5 @@ jobs:
         script: |
           # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/common/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/
           # cp -R /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/keep/${{matrix.target}}/* /www/wwwroot/${{ secrets.REMOTE_HOST }}/packages/${{matrix.target}}/
-          bash opkg.sh ${{matrix.target}} &
+          bash opkg ${{matrix.target}} &
 
