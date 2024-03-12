@@ -6,14 +6,14 @@
 # Blog: https://p3terx.com
 #=================================================
 
-name: Repo-one
+name: Repo-1
 
 on: 
   # push: 
   #   branches:
   #     - master
   schedule:
-    - cron: 30 10 * * *
+    - cron: 30 8 * * *
   watch:
     types: started
   workflow_dispatch:
