@@ -1,7 +1,11 @@
 #!/bin/bash
 
 shopt -s extglob
-rm -rf feeds/jell/{diy,mt-drivers,shortcut-fe,luci-app-mtwifi,base-files,firewall,dnsmasq}
+rm -rf feeds/kiddin9/{diy,mt-drivers,shortcut-fe,luci-app-mtwifi,base-files,luci-app-package-manager \
+dnsmasq,firewall*,wifi-scripts,opkg,ppp,curl,luci-app-firewall,\
+nftables,fstools,wireless-regdb,libnftnl}
+
+curl -sfL https://raw.githubusercontent.com/openwrt/packages/master/lang/golang/golang/Makefile -o feeds/packages/lang/golang/golang/Makefile
 
 for ipk in $(find feeds/jell/* -maxdepth 0 -type d);
 do
@@ -13,7 +17,6 @@ rm -Rf feeds/luci/{applications,collections,protocols,themes,libs,docs,contrib}
 rm -Rf feeds/luci/modules/!(luci-base)
 rm -Rf feeds/packages/!(lang|libs|devel|utils|net|multimedia)
 rm -Rf feeds/packages/multimedia/!(gstreamer1|ffmpeg)
-rm -Rf feeds/packages/libs/libcups
 rm -Rf feeds/packages/net/!(mosquitto|curl)
 rm -Rf feeds/base/package/firmware
 rm -Rf feeds/base/package/network/!(services|utils)
@@ -35,7 +38,6 @@ done
 
 sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/jell/luci-*/luasrc/controller/* -name "*.lua"`
 # sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/jell/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
-sed -i 's/Os/O2/g' include/target.mk
 
 sed -i \
 	-e "s/+\(luci\|luci-ssl\|uhttpd\)\( \|$\)/\2/" \
