@@ -158,11 +158,10 @@ jobs:
     
     - name: Load custom configuration
       run: |
-        mkdir -p openwrt
-        tar --use-compress-program=unzstd -xf sdk.tar.zst -C openwrt || tar -xf sdk.tar.zst -C openwrt
-        rm -Rf sdk.tar.xz
+        tar -xJf sdk.tar.zst -C openwrt || tar -xf sdk.tar.zst -C openwrt
+        rm -Rf sdk.tar.zst
         cd openwrt
-        cp -rf ./openwrt-sdk*/. ./ || true
+        cp -rf ./openwrt-sdk*/. ./ 2>/dev/null || true
         cp -rf ./openwrt-sdk*/build_dir/. ./build_dir/ || true
         cp -rf ./openwrt-sdk*/staging_dir/. ./staging_dir/ || true
         cp -rf ../devices ./
@@ -176,7 +175,7 @@ jobs:
         if [ -f "devices/${{matrix.target}}/custom.sh" ]; then
           /bin/bash "devices/${{matrix.target}}/custom.sh"
         fi
-        find "devices/common/patches" -type f -name '*.patch' ! -name '*.b.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
+        find "devices/common/patches" -type f -name '*.patch' -print0 | sort -z | xargs -0 -n 1 sh -c "cat '%' | patch -d './' -p1 -E --forward --no-backup-if-mismatch || true"
         if [ -n "$(ls -A "devices/${{matrix.target}}/patches" 2>/dev/null)" ]; then
           find "devices/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
         fi
@@ -189,9 +188,7 @@ jobs:
           echo >> .config
           cat devices/${{matrix.target}}/.config >> .config
         fi
-        #if [[ ${{github.actor}} == "kenzok8" ]]; then
-          #sed -i "s/index()/index()\nif luci.sys.exec(\"cat \/etc\/openwrt_release | grep -o -E ^DISTRIB_DESCRIPTION='.*(kenzo|Kenzo) == \"\" then return end/g" package/feeds/jell/luci-app*/luasrc/controller/*.lua
-        #fi
+	make defconfig
 
     - name: SSH connection to Actions
       uses: kenzok78/debugger-action@master
