@@ -101,7 +101,7 @@ jobs:
     - name: Clone source code
       run: |
         set -v
-        REPO_BRANCH="23.05-SNAPSHOT"
+        REPO_BRANCH="24.10-SNAPSHOT"
         echo "$REPO_BRANCH"
         if [ ${{matrix.target}} == "mipsel_24kc" ]; then
             curl -fL -m 500 -o sdk.tar.xz https://downloads.openwrt.org/releases/$REPO_BRANCH/targets/ramips/mt7621/openwrt-sdk-$REPO_BRANCH-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.xz || curl -fL -m 500 -o sdk.tar.xz https://downloads.cdn.openwrt.org/releases/$REPO_BRANCH/targets/ramips/mt7621/openwrt-sdk-$REPO_BRANCH-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.xz 
