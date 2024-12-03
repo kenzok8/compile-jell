@@ -188,7 +188,7 @@ jobs:
           echo >> .config
           cat devices/${{matrix.target}}/.config >> .config
         fi
-	make defconfig
+        make defconfig
 
     - name: SSH connection to Actions
       uses: kenzok78/debugger-action@master
