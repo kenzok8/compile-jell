@@ -1,7 +1,7 @@
 #!/bin/bash
 
 shopt -s extglob
-rm -rf feeds/kiddin9/{diy,mt-drivers,shortcut-fe,luci-app-mtwifi,base-files,luci-app-package-manager \
+rm -rf feeds/jell/{diy,mt-drivers,shortcut-fe,luci-app-mtwifi,base-files,luci-app-package-manager,\
 dnsmasq,firewall*,wifi-scripts,opkg,ppp,curl,luci-app-firewall,\
 nftables,fstools,wireless-regdb,libnftnl}
 
