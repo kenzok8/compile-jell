@@ -41,51 +41,66 @@ jobs:
 
     - name: Trigger matrix Update
       run: |
-        gitdate=$(curl -H "Authorization: token ${{ secrets.GH_API_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/commits?path=$ipk&per_page=1" | jq -r '.[0].commit.committer.date') || true
-        fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(aarch64_generic\|x86_64\|i386_pentium4\|arm_arm1176jzf-s_vfp\|aarch64_cortex-a72\|arm_cortex-a7\|arm_cortex-a7_neon-vfpv4\|arm_cortex-a9\|arm_cortex-a15_neon-vfpv4\|arm_cortex-a5_vfpv4\|mipsel_24kc\|mips_24kc\|aarch64_cortex-a53\|arm_xscale\|arm_cortex-a9_vfpv3-d16\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
-        during="$(echo "${{github.event.inputs.packages}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
-        [[ "$fpkg" && ! "$during" ]] || {
-          [ "$during" ] || during="1.05"
-          durings=`echo "$during*60*60*24" | bc`
-          gitdate=$(date -d "$gitdate" +%s)
-          now=$(date -d "$(date)" +%s)
-          [ "$during" ] || during="1.05"
-          durings=`echo "$during*60*60*24" | bc`
-          if [[ $(expr $gitdate + ${durings%.*}) -lt $now ]]; then
-            exit;
-          fi
-        gitdate=$(curl -H "Authorization: token ${{ secrets.GH_API_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/actions/runs" | jq -r '.workflow_runs[0].created_at') || true
-        gitdate=$(date -d "$gitdate" +%s)
-        now=$(date -d "$(date)" +%s)
-        if [[ $(expr $gitdate + 180) -lt $now ]]; then
-        curl -X POST https://api.github.com/repos/kenzok8/jell/dispatches \
-        -H "Accept: application/vnd.github.everest-preview+json" \
-        -H "Authorization: token ${{ env.REPO_TOKEN }}" \
-        --data '{"event_type": "update"}'
+        set -e
+
+        # 尝试从本地 git 获取最新提交时间（如果有）
+        if [ -n "$ipk" ]; then
+          echo "🔍 检查本地 git 提交时间..."
+          git clone --depth 1 https://github.com/kenzok8/jell temp_repo
+          gitdate=$(cd temp_repo && git log -1 --format=%cI -- "$ipk" || true)
+          rm -rf temp_repo
         fi
-        }
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
+
+        # 如果本地没有获取到，再调用 API
+        if [ -z "$gitdate" ]; then
+          echo "🔄 本地未找到提交记录，调用 GitHub API..."
+          json=$(curl -s -H "Authorization: token ${{ secrets.GH_API_TOKEN }}" \
+            "https://api.github.com/repos/kenzok8/jell/commits?path=$ipk&per_page=1")
+          
+          if echo "$json" | jq -e 'type=="array" and length>0' >/dev/null 2>&1; then
+            gitdate=$(echo "$json" | jq -r '.[0].commit.committer.date')
+          else
+            echo "⚠️ API 返回空数据或被限流，跳过此次触发"
+            exit 0
+          fi
+        fi
+
+        # 如果 gitdate 有效才继续处理
+        if [ -n "$gitdate" ]; then
+          gitdate=$(date -d "$gitdate" +%s)
+          now=$(date +%s)
+          fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(aarch64_generic\|x86_64\|i386_pentium4\|arm_arm1176jzf-s_vfp\|aarch64_cortex-a72\|arm_cortex-a7\|arm_cortex-a7_neon-vfpv4\|arm_cortex-a9\|arm_cortex-a15_neon-vfpv4\|arm_cortex-a5_vfpv4\|mipsel_24kc\|mips_24kc\|aarch64_cortex-a53\|arm_xscale\|arm_cortex-a9_vfpv3-d16\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
+          during="$(echo "${{github.event.inputs.packages}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
+          [ "$during" ] || during="1.05"
+          durings=$(echo "$during*60*60*24" | bc)
+          if [[ $(expr $gitdate + ${durings%.*}) -lt $now ]]; then
+            echo "⏩ 提交时间超过设定时间，退出"
+            exit 0
+          fi
+        fi
+
+        echo "✅ 条件满足，触发 dispatch"
+        curl -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ env.REPO_TOKEN }}" \
           -d '{"event_type": "x86_64 ${{ github.event.inputs.packages }}", "client_payload": {"target": "x86_64"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
+
+        curl -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ env.REPO_TOKEN }}" \
           -d '{"event_type": "i386_pentium4 ${{ github.event.inputs.packages }}", "client_payload": {"target": "i386_pentium4"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
+
+        curl -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ env.REPO_TOKEN }}" \
           -d '{"event_type": "aarch64_generic ${{ github.event.inputs.packages }}", "client_payload": {"target": "aarch64_generic"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
+
+        curl -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ env.REPO_TOKEN }}" \
           -d '{"event_type": "arm_arm1176jzf-s_vfp ${{ github.event.inputs.packages }}", "client_payload": {"target": "arm_arm1176jzf-s_vfp"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
+
+        curl -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ env.REPO_TOKEN }}" \
           -d '{"event_type": "arm_cortex-a5_vfpv4 ${{ github.event.inputs.packages }}", "client_payload": {"target": "arm_cortex-a5_vfpv4"}}'
