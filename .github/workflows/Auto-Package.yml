@@ -66,20 +66,8 @@ jobs:
         fi
         sed -i "1a REPO_TOKEN=${{ env.REPO_TOKEN }}" ${GITHUB_WORKSPACE}/devices/common/custom.sh
 
-    - name: Trigger Packages Update
-      run: |
-        gitdate="$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/actions/runs" | jq -r '.workflow_runs[0].created_at')" || true
-        gitdate="$(date -d "$gitdate" +%s)" || true
-        now="$(date -d "$(date)" +%s)"
-        if [[ $(expr $gitdate + 120) < $now ]]; then
-        curl -X POST https://api.github.com/repos/kenzok8/jell/dispatches \
-        -H "Accept: application/vnd.github.everest-preview+json" \
-        -H "Authorization: token ${{ env.REPO_TOKEN }}" \
-        --data '{"event_type": "update"}'
-        fi
-
     - name: Free disk space
-      uses: jlumbroso/free-disk-space@main
+      uses: coder-xiaomo/free-disk-space@main
       with:
         tool-cache: false
         android: true
@@ -94,13 +82,13 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         sudo -E apt-get -qq update
-        sudo -E apt-get -qq install build-essential clang flex g++ gawk gcc-multilib gettext \
-        git libncurses5-dev libssl-dev python3-pyelftools rsync unzip zlib1g-dev swig libpython3-dev jq rename bc libfuse-dev libelf-dev
-        sudo -E apt-get -qq purge azure-cli ghc* zulu* firefox powershell openjdk* dotnet* google* mysql* php* android*
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -qq install build-essential libncurses-dev zlib1g-dev gawk git \
+        gettext libssl-dev xsltproc rsync wget unzip \
+        llvm python3-pyelftools libpython3-dev aria2 jq qemu-utils rename \
+        libelf-dev libgmp3-dev libmpc-dev libfuse-dev bc autopoint cups-ppdc
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
-        sudo timedatectl set-timezone "$TZ"
+        sudo timedatectl set-timezone "Asia/Shanghai"
 
     - name: Get current date
       id: date
@@ -147,18 +135,44 @@ jobs:
         fi
 
     - name: Free up disk space
-      if: env.FREE_UP_DISK == 'true'
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        sudo mkdir -p -m 777 openwrt /mnt/openwrt/dl /mnt/openwrt/build_dir/hostpkg openwrt/build_dir /mnt/openwrt/bin
-        ln -sf /mnt/openwrt/dl openwrt/dl
-        ln -sf /mnt/openwrt/build_dir/hostpkg openwrt/build_dir/hostpkg
-        ln -sf /mnt/openwrt/bin openwrt/bin
+        sudo mkdir -p -m 777 openwrt /mnt/openwrt/staging_dir /mnt/openwrt/build_dir /mnt/openwrt/bin  /mnt/openwrt/dl
+        if [[ "$(echo "${{github.event.action}}" | grep "a-")" ]]; then
+          ln -sf /mnt/openwrt/staging_dir openwrt/staging_dir
+          ln -sf /mnt/openwrt/bin openwrt/bin
+          ln -sf /mnt/openwrt/dl openwrt/dl
+          ln -sf /mnt/openwrt/build_dir openwrt/build_dir
+        fi
+        df -hT
     
     - name: Load custom configuration
       run: |
-        mkdir -p openwrt
+        function git_clone_path() {
+          trap 'rm -rf "$tmpdir"' EXIT
+          branch="$1" rurl="$2" mv="$3"
+          [[ "$mv" != "mv" ]] && shift 2 || shift 3
+          rootdir="$PWD"
+          tmpdir="$(mktemp -d)" || exit 1
+          if [ ${#branch} -lt 10 ]; then
+          git clone -b "$branch" --depth 1 --filter=blob:none --sparse "$rurl" "$tmpdir"
+          cd "$tmpdir"
+          else
+          git clone --filter=blob:none --sparse "$rurl" "$tmpdir"
+          cd "$tmpdir"
+          git checkout $branch
+          fi
+          if [ "$?" != 0 ]; then
+            echo "error on $rurl"
+            exit 1
+          fi
+          git sparse-checkout init --cone
+          git sparse-checkout set $@
+          [[ "$mv" != "mv" ]] && cp -rn ./* $rootdir/ || mv -n $@/* $rootdir/$@/
+          cd $rootdir
+          }
+        export -f git_clone_path
         tar -xJf sdk.tar.zst -C openwrt || tar -xf sdk.tar.zst -C openwrt
         rm -Rf sdk.tar.zst
         cd openwrt
@@ -189,6 +203,11 @@ jobs:
           echo >> .config
           cat devices/${{matrix.target}}/.config >> .config
         fi
+        status=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/small-package/actions/runs" | jq -r '.workflow_runs[0].status')
+        while [ "$status" == "in_progress" ];do
+          sleep 5
+          status=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/small-package/actions/runs" | jq -r '.workflow_runs[0].status')
+        done
         make defconfig
 
     - name: SSH connection to Actions
@@ -197,20 +216,12 @@ jobs:
 
     - name: Prepare
       run: |
-        status=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/actions/runs" | jq -r '.workflow_runs[0].status')
-        while [ "$status" == "in_progress" ];do
-          sleep 5
-          status=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/actions/runs" | jq -r '.workflow_runs[0].status')
-        done 
         cd openwrt
-        make defconfig
-        #rm -rf feeds/packages/lang/golang
-        #git clone https://github.com/kenzok8/golang feeds/packages/lang/golang
         mv -f package/feeds/jell jell.b
         mv -f feeds/packages/lang feeds/packages/lang.b
         mv -f feeds/packages feeds/packages.b
         mkdir package/feeds/jell
-        cp -rf jell.b/{wxbase,lib*,rapidjson,jpcre2,toml11,curl,quickjspp,qt*,libtorrent*,openssl,mbedtls,ppp,cups} package/feeds/jell/ || true
+        cp -rf jell.b/{wxbase,lib*,rapidjson,nftables,jpcre2,toml11,gn,curl,quickjspp,qt*,libdouble*,libtorrent*,openssl,mbedtls,ppp,cups,nftables} package/feeds/jell/ || true
 
     - name: Compile the firmware
       run: |
