@@ -30,6 +30,7 @@ env:
   B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
   B2_BUCKET: ${{ secrets.B2_BUCKET }}
   B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
+  B2_PATH_PREFIX: ${{ secrets.B2_PATH_PREFIX }}
   TZ: Asia/Shanghai
 
 jobs:
@@ -320,7 +321,9 @@ jobs:
       continue-on-error: true
       run: |
         B2_BASE_URL="${{ env.B2_PUBLIC_BASE_URL }}"
-        [ -z "$B2_BASE_URL" ] && B2_BASE_URL="https://f000.backblazeb2.com/file/${{ env.B2_BUCKET }}"
+        B2_PATH_PREFIX="${{ env.B2_PATH_PREFIX }}"
+        [ -z "$B2_PATH_PREFIX" ] && B2_PATH_PREFIX="op-dllkids-xyz-archive/dllkids.xyz"
+        [ -z "$B2_BASE_URL" ] && B2_BASE_URL="https://f000.backblazeb2.com/file/${{ env.B2_BUCKET }}/${B2_PATH_PREFIX}"
         echo -e "定时更新插件，推送发布 🎈:\n" >> release.txt
         echo -e "[下载链接] (${B2_BASE_URL%/}/packages/${{matrix.target}}/)\n" >> release.txt
         [ ${{ env.WETRANS }} ] && echo -e "[WeTransfer] (${{ env.WETRANS }} 🗽)\n" >> release.txt
@@ -367,7 +370,9 @@ jobs:
         hard_delete = true
         EOF
 
-        rclone sync packages/ "b2:${{ env.B2_BUCKET }}/packages/${{matrix.target}}/" \
+        B2_PATH_PREFIX="${{ env.B2_PATH_PREFIX }}"
+        [ -z "$B2_PATH_PREFIX" ] && B2_PATH_PREFIX="op-dllkids-xyz-archive/dllkids.xyz"
+        rclone sync packages/ "b2:${{ env.B2_BUCKET }}/${B2_PATH_PREFIX}/packages/${{matrix.target}}/" \
           --checksum \
           --fast-list \
           --transfers 8 \

@@ -43,12 +43,14 @@ jobs:
         env:
           B2_BUCKET: ${{ secrets.B2_BUCKET }}
           B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
+          B2_PATH_PREFIX: ${{ secrets.B2_PATH_PREFIX }}
         run: |
           set -euo pipefail
           TS=$(date +%Y%m%d-%H%M%S)
-          PREFIX="packages/smoke/compile-jell/${TS}"
+          B2_PATH_PREFIX="${B2_PATH_PREFIX:-op-dllkids-xyz-archive/dllkids.xyz}"
+          PREFIX="${B2_PATH_PREFIX}/packages/smoke/compile-jell/${TS}"
           echo "compile-jell b2 smoke ${TS}" > smoke-test.txt
           rclone copy smoke-test.txt "b2:${B2_BUCKET}/${PREFIX}/" --checksum --fast-list
           rclone lsf "b2:${B2_BUCKET}/${PREFIX}/"
-          BASE_URL="${B2_PUBLIC_BASE_URL:-https://f000.backblazeb2.com/file/${B2_BUCKET}}"
+          BASE_URL="${B2_PUBLIC_BASE_URL:-https://f000.backblazeb2.com/file/${B2_BUCKET}/${B2_PATH_PREFIX}}"
           echo "Uploaded: ${BASE_URL%/}/${PREFIX}/smoke-test.txt"
