@@ -6,7 +6,6 @@ dnsmasq,firewall*,wifi-scripts,opkg,ppp,curl,luci-app-firewall,\
 nftables,fstools,wireless-regdb,libnftnl,netdata}
 rm -rf feeds/packages/libs/libcups
 
-curl -sfL https://raw.githubusercontent.com/openwrt/packages/master/lang/golang/golang/Makefile -o feeds/packages/lang/golang/golang/Makefile
 
 for ipk in $(find feeds/jell/* -maxdepth 0 -type d);
 do
@@ -35,6 +34,8 @@ status=$(curl -H "Authorization: token $REPO_TOKEN" -s "https://api.github.com/r
 done
 
 ./scripts/feeds update -a
+        rm -rf feeds/packages/lang/golang
+        git clone https://github.com/kenzok8/golang -b 1.26 feeds/packages/lang/golang
 ./scripts/feeds install -a -p jell -f
 ./scripts/feeds install -a
 
