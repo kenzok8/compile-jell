@@ -82,6 +82,22 @@ jobs:
         docker-images: true
         swap-storage: true
 
+    - name: Aggressive disk cleanup + diagnostics
+      run: |
+        echo "=== Disk before cleanup ==="
+        df -hT
+        sudo rm -rf /usr/local/lib/android || true
+        sudo rm -rf /usr/share/dotnet || true
+        sudo rm -rf /opt/ghc || true
+        sudo rm -rf /usr/local/share/boost || true
+        sudo rm -rf /usr/local/.ghcup || true
+        sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+        sudo docker system prune -af --volumes || true
+        sudo apt-get -qq autoremove --purge || true
+        sudo apt-get -qq clean || true
+        echo "=== Disk after cleanup ==="
+        df -hT
+
     - name: Initialization environment
       env:
         DEBIAN_FRONTEND: noninteractive
@@ -227,6 +243,12 @@ jobs:
         mv -f feeds/packages feeds/packages.b
         mkdir package/feeds/jell
         cp -rf jell.b/{wxbase,lib*,rapidjson,nftables,jpcre2,toml11,gn,curl,quickjspp,qt*,libdouble*,libtorrent*,openssl,mbedtls,ppp,cups,nftables} package/feeds/jell/ || true
+
+    - name: Compile preflight disk check
+      run: |
+        echo "=== Pre-compile disk usage ==="
+        df -hT
+        du -h -d1 openwrt 2>/dev/null | sort -hr | head -30 || true
 
     - name: Compile the firmware
       run: |
