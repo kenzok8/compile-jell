@@ -39,6 +39,15 @@ done
 ./scripts/feeds install -a -p jell -f
 ./scripts/feeds install -a
 
+if [ "$SDK_VER" = "25.12" ]; then
+	for mk in package/feeds/jell/*/Makefile; do
+		[ -f "$mk" ] || continue
+		grep -q '^PKG_SOURCE_DATE:=' "$mk" || continue
+		grep -q '^PKG_VERSION:=' "$mk" && continue
+		awk '{ print } /^PKG_SOURCE_DATE:=/ { print "PKG_VERSION:=$(PKG_SOURCE_DATE)" }' "$mk" > "$mk.tmp" && mv "$mk.tmp" "$mk"
+	done
+fi
+
 rm -rf package/feeds/jell/luci-app-quickstart/root/usr/share/luci/menu.d/luci-app-quickstart.json
 
 sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/jell/luci-*/luasrc/controller/* -name "*.lua"`

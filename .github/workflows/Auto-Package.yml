@@ -313,6 +313,11 @@ jobs:
     - name: Check space usage
       run: df -hT
 
+    - name: Generate package index
+      run: |
+        cd openwrt
+        make package/index V=s
+
     - name: Organize files
       id: organize
       run: |
@@ -385,7 +390,7 @@ jobs:
         path: packages
 
     - name: Upload packages to Backblaze B2
-      if: ! contains(github.event.action, 'noser')
+      if: ${{ ! contains(github.event.action, 'noser') }}
       run: |
         set -euo pipefail
         [ -n "${{ env.B2_KEY_ID }}" ] || { echo "Missing B2_KEY_ID"; exit 1; }
