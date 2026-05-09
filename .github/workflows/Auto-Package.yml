@@ -127,12 +127,15 @@ jobs:
         if [ "$SDK_VER" = "24.10" ]; then
           GCC="13.3.0"
           REPO_BRANCH="24.10-SNAPSHOT"
+          FEEDS_BRANCH="openwrt-24.10"
         else
           GCC="14.3.0"
-          REPO_BRANCH="25.12-SNAPSHOT"
+          REPO_BRANCH="25.12.0"
+          FEEDS_BRANCH="openwrt-25.12"
         fi
         echo "GCC=$GCC" >> $GITHUB_ENV
         echo "REPO_BRANCH=$REPO_BRANCH" >> $GITHUB_ENV
+        echo "FEEDS_BRANCH=$FEEDS_BRANCH" >> $GITHUB_ENV
         # echo "$REPO_BRANCH" moved above
         # echo "$REPO_BRANCH" moved above
         if [ ${{matrix.target}} == "mipsel_24kc" ]; then
@@ -216,6 +219,7 @@ jobs:
         cp -rf devices/common/. ./
         cp -rf devices/${{matrix.target}}/. ./
         chmod -R +x devices/* || true
+        sed -i -E "s#(https://github.com/openwrt/(openwrt|packages|luci)\\.git;).*#\\1${FEEDS_BRANCH}#" feeds.conf
         sed -i '/	refresh_config();/d' scripts/feeds
         ./scripts/feeds update -a
         find "devices/common/patches" -type f -name '*.b.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
@@ -235,6 +239,12 @@ jobs:
         if [ -f "devices/${{matrix.target}}/.config" ]; then
           echo >> .config
           cat devices/${{matrix.target}}/.config >> .config
+        fi
+        sed -i '/^CONFIG_USE_APK=/d' .config
+        if [ "$SDK_VER" = "25.12" ]; then
+          echo 'CONFIG_USE_APK=y' >> .config
+        else
+          echo 'CONFIG_USE_APK=n' >> .config
         fi
         status=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/small-package/actions/runs" | jq -r '.workflow_runs[0].status')
         while [ "$status" == "in_progress" ];do
