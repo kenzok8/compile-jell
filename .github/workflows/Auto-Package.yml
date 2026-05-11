@@ -417,7 +417,7 @@ jobs:
         hard_delete = true
         EOF
 
-        rclone sync packages/ "b2:${{ env.B2_BUCKET }}/openwrt-feed/${{ env.SDK_VER }}/${{matrix.target}}/" \
+        rclone copy packages/ "b2:${{ env.B2_BUCKET }}/openwrt-feed/${{ env.SDK_VER }}/${{matrix.target}}/" \
           --checksum \
           --fast-list \
           --transfers 8 \
