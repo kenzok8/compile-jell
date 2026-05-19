@@ -423,6 +423,20 @@ jobs:
           --transfers 8 \
           --checkers 16
 
+    - name: Create website directory entries
+      uses: appleboy/ssh-action@master
+      if: env.SSH_PRIVATE_KEY && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
+      with:
+        host: ${{ env.REMOTE_HOST }}
+        port: ${{ env.REMOTE_PORT }}
+        username: root
+        key: ${{ env.SSH_PRIVATE_KEY }}
+        script: |
+          set -e
+          WEB_ROOT="/www/wwwroot/${{ env.REMOTE_HOST }}/openwrt-feed"
+          mkdir -p "${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}"
+          touch "${WEB_ROOT}/${{ env.SDK_VER }}/.keep" "${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}/.keep"
+
     # - name: deploy files to server
     #   uses: easingthemes/ssh-deploy@main
     #   if: env.SSH_PRIVATE_KEY && ! contains(github.event.action, 'noser')
