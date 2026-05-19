@@ -433,14 +433,16 @@ jobs:
         mkdir -p "$TARGET_DIR"
         INDEX_FILE="${TARGET_DIR}/index.html"
         LINK_PREFIX="${B2_BASE_URL%/}/openwrt-feed/${{ env.SDK_VER }}/${{ matrix.target }}"
+        RCLONE_REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/${{ env.SDK_VER }}/${{ matrix.target }}"
         {
           printf '<!doctype html>\n<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
           printf '<title>OpenWrt feed - %s/%s</title>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
           printf '<style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;background:#282c34;color:#eee}a{color:#f0f0f0}.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 190px;gap:16px;padding:10px 0;border-bottom:1px solid #3a3f4b}.size,.date{color:#ddd;text-align:right}@media(max-width:720px){.row{grid-template-columns:1fr}.size,.date{text-align:left}}</style>\n'
           printf '</head><body><h1>OpenWrt feed: %s/%s</h1>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
           printf '<div class="row"><a href="../">Parent directory/</a><span class="size">-</span><span class="date">-</span></div>\n'
-          find packages -maxdepth 1 -type f -printf '%f\t%s\t%TY-%Tm-%Td %TH:%TM\n' | sort | while IFS="$(printf '\t')" read -r name size mtime; do
-            href="${LINK_PREFIX}/${name}"
+          rclone lsf "$RCLONE_REMOTE/" --files-only --format pst --separator "$(printf '\t')" | sort | while IFS="$(printf '\t')" read -r name size mtime; do
+            url_name="$(jq -nr --arg name "$name" '$name|@uri')"
+            href="${LINK_PREFIX}/${url_name}"
             printf '<div class="row"><a href="%s">%s</a><span class="size">%s</span><span class="date">%s</span></div>\n' "$href" "$name" "$size" "$mtime"
           done
           printf '</body></html>\n'
