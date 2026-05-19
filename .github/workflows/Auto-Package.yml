@@ -23,6 +23,7 @@ env:
   REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
   REMOTE_SSH_HOST: ${{ secrets.REMOTE_SSH_HOST }}
   REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+  REMOTE_USER: ${{ secrets.REMOTE_USER }}
   SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
   PASSWORD: ${{ secrets.PASSWORD }}
   TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -458,33 +459,36 @@ jobs:
           printf '</body></html>\n'
         } > "$INDEX_FILE"
 
-    - name: Create website directory entries
-      uses: appleboy/ssh-action@master
+    - name: Upload website index page to VPS temp
+      uses: appleboy/scp-action@master
       continue-on-error: true
-      if: env.SSH_PRIVATE_KEY && env.REMOTE_SSH_HOST && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
+      if: env.SSH_PRIVATE_KEY && env.REMOTE_SSH_HOST && env.REMOTE_USER && ! contains(github.event.action, 'noser')
       with:
         host: ${{ env.REMOTE_SSH_HOST }}
         port: ${{ env.REMOTE_PORT }}
-        username: root
+        username: ${{ env.REMOTE_USER }}
+        key: ${{ env.SSH_PRIVATE_KEY }}
+        source: "website-index/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
+        target: "/tmp/compile-jell-feed-index/${{ github.run_id }}-${{ github.run_attempt }}/${{ env.SDK_VER }}/${{ matrix.target }}"
+        strip_components: 3
+
+    - name: Install website index page
+      uses: appleboy/ssh-action@master
+      continue-on-error: true
+      if: env.SSH_PRIVATE_KEY && env.REMOTE_SSH_HOST && env.REMOTE_USER && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
+      with:
+        host: ${{ env.REMOTE_SSH_HOST }}
+        port: ${{ env.REMOTE_PORT }}
+        username: ${{ env.REMOTE_USER }}
         key: ${{ env.SSH_PRIVATE_KEY }}
         script: |
           set -e
           WEB_ROOT="/www/wwwroot/${{ env.REMOTE_HOST }}/openwrt-feed"
-          mkdir -p "${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}"
-          touch "${WEB_ROOT}/${{ env.SDK_VER }}/.keep" "${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}/.keep"
-
-    - name: Upload website index page
-      uses: appleboy/scp-action@master
-      continue-on-error: true
-      if: env.SSH_PRIVATE_KEY && env.REMOTE_SSH_HOST && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
-      with:
-        host: ${{ env.REMOTE_SSH_HOST }}
-        port: ${{ env.REMOTE_PORT }}
-        username: root
-        key: ${{ env.SSH_PRIVATE_KEY }}
-        source: "website-index/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
-        target: "/www/wwwroot/${{ env.REMOTE_HOST }}/openwrt-feed"
-        strip_components: 1
+          SRC="/tmp/compile-jell-feed-index/${{ github.run_id }}-${{ github.run_attempt }}/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
+          DST="${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}"
+          sudo mkdir -p "$DST"
+          sudo install -o www -g www -m 0644 "$SRC" "$DST/index.html"
+          sudo touch "${WEB_ROOT}/${{ env.SDK_VER }}/.keep" "$DST/.keep"
 
     # - name: deploy files to server
     #   uses: easingthemes/ssh-deploy@main
