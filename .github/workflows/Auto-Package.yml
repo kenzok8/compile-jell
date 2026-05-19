@@ -423,6 +423,29 @@ jobs:
           --transfers 8 \
           --checkers 16
 
+    - name: Generate website index page
+      if: ${{ ! contains(github.event.action, 'noser') }}
+      run: |
+        set -euo pipefail
+        B2_BASE_URL="${{ env.B2_PUBLIC_BASE_URL }}"
+        [ -z "$B2_BASE_URL" ] && B2_BASE_URL="https://down.dllkids.xyz"
+        TARGET_DIR="website-index/${{ env.SDK_VER }}/${{ matrix.target }}"
+        mkdir -p "$TARGET_DIR"
+        INDEX_FILE="${TARGET_DIR}/index.html"
+        LINK_PREFIX="${B2_BASE_URL%/}/openwrt-feed/${{ env.SDK_VER }}/${{ matrix.target }}"
+        {
+          printf '<!doctype html>\n<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+          printf '<title>OpenWrt feed - %s/%s</title>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
+          printf '<style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;background:#282c34;color:#eee}a{color:#f0f0f0}.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 190px;gap:16px;padding:10px 0;border-bottom:1px solid #3a3f4b}.size,.date{color:#ddd;text-align:right}@media(max-width:720px){.row{grid-template-columns:1fr}.size,.date{text-align:left}}</style>\n'
+          printf '</head><body><h1>OpenWrt feed: %s/%s</h1>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
+          printf '<div class="row"><a href="../">Parent directory/</a><span class="size">-</span><span class="date">-</span></div>\n'
+          find packages -maxdepth 1 -type f -printf '%f\t%s\t%TY-%Tm-%Td %TH:%TM\n' | sort | while IFS="$(printf '\t')" read -r name size mtime; do
+            href="${LINK_PREFIX}/${name}"
+            printf '<div class="row"><a href="%s">%s</a><span class="size">%s</span><span class="date">%s</span></div>\n' "$href" "$name" "$size" "$mtime"
+          done
+          printf '</body></html>\n'
+        } > "$INDEX_FILE"
+
     - name: Create website directory entries
       uses: appleboy/ssh-action@master
       if: env.SSH_PRIVATE_KEY && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
@@ -436,6 +459,18 @@ jobs:
           WEB_ROOT="/www/wwwroot/${{ env.REMOTE_HOST }}/openwrt-feed"
           mkdir -p "${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}"
           touch "${WEB_ROOT}/${{ env.SDK_VER }}/.keep" "${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}/.keep"
+
+    - name: Upload website index page
+      uses: appleboy/scp-action@master
+      if: env.SSH_PRIVATE_KEY && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
+      with:
+        host: ${{ env.REMOTE_HOST }}
+        port: ${{ env.REMOTE_PORT }}
+        username: root
+        key: ${{ env.SSH_PRIVATE_KEY }}
+        source: "website-index/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
+        target: "/www/wwwroot/${{ env.REMOTE_HOST }}/openwrt-feed"
+        strip_components: 1
 
     # - name: deploy files to server
     #   uses: easingthemes/ssh-deploy@main
