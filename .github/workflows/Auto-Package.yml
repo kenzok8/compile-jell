@@ -21,6 +21,7 @@ env:
   PPPOE_PASSWD: ${{ secrets.PPPOE_PASSWD }}
   SCKEY: ${{ secrets.SCKEY }}
   REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+  REMOTE_SSH_HOST: ${{ secrets.REMOTE_SSH_HOST }}
   REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
   SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
   PASSWORD: ${{ secrets.PASSWORD }}
@@ -435,24 +436,34 @@ jobs:
         LINK_PREFIX="${B2_BASE_URL%/}/openwrt-feed/${{ env.SDK_VER }}/${{ matrix.target }}"
         RCLONE_REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/${{ env.SDK_VER }}/${{ matrix.target }}"
         {
-          printf '<!doctype html>\n<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
-          printf '<title>OpenWrt feed - %s/%s</title>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
-          printf '<style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;background:#282c34;color:#eee}a{color:#f0f0f0}.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 190px;gap:16px;padding:10px 0;border-bottom:1px solid #3a3f4b}.size,.date{color:#ddd;text-align:right}@media(max-width:720px){.row{grid-template-columns:1fr}.size,.date{text-align:left}}</style>\n'
-          printf '</head><body><h1>OpenWrt feed: %s/%s</h1>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
-          printf '<div class="row"><a href="../">Parent directory/</a><span class="size">-</span><span class="date">-</span></div>\n'
+          printf '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><meta http-equiv="x-ua-compatible" content="IE=edge">\n'
+          printf '<title>OpenWrt固件与插件</title><meta name="viewport" content="width=device-width, initial-scale=1">\n'
+          printf '<link rel="stylesheet" href="/Nginx-Fancyindex-Theme-dark/styles.css?v=20260224b">\n'
+          printf '<script type="text/javascript" src="/Nginx-Fancyindex-Theme-dark/jquery.min.js"></script>\n'
+          printf '</head><body class="theme-dark"><div id="raw_include_HEADER_md"></div>\n'
+          printf '<h1>OpenWrt固件插件: /openwrt-feed/%s/%s/</h1>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
+          printf '<table id="list"><thead><tr><th style="width:55%%">File Name</th><th style="width:20%%">File Size</th><th style="width:25%%">Date</th></tr></thead><tbody>\n'
+          printf '<tr><td class="link"><a href="../">Parent directory/</a></td><td class="size">-</td><td class="date">-</td></tr>\n'
           rclone lsf "$RCLONE_REMOTE/" --files-only --format pst --separator "$(printf '\t')" | sort | while IFS="$(printf '\t')" read -r name size mtime; do
             url_name="$(jq -nr --arg name "$name" '$name|@uri')"
             href="${LINK_PREFIX}/${url_name}"
-            printf '<div class="row"><a href="%s">%s</a><span class="size">%s</span><span class="date">%s</span></div>\n' "$href" "$name" "$size" "$mtime"
+            printf '<tr><td class="link"><a href="%s" title="%s">%s</a></td><td class="size">%s</td><td class="date">%s</td></tr>\n' "$href" "$name" "$name" "$size" "$mtime"
           done
+          printf '</tbody></table><div id="raw_include_README_md"></div>\n'
+          printf '<footer><a href="https://github.com/kenzok8/openwrt_Build">GitHub仓库</a></footer>\n'
+          printf '<footer><a href="https://github.com/kenzok8">作者kenzo</a></footer>\n'
+          printf '<script src="https://unpkg.com/xregexp/xregexp-all.js"></script>\n'
+          printf '<script type="text/javascript" src="/Nginx-Fancyindex-Theme-dark/addNginxFancyIndexForm.js?v=20260224h"></script>\n'
+          printf '<script type="text/javascript" src="/Nginx-Fancyindex-Theme-dark/showdown.min.js"></script>\n'
           printf '</body></html>\n'
         } > "$INDEX_FILE"
 
     - name: Create website directory entries
       uses: appleboy/ssh-action@master
-      if: env.SSH_PRIVATE_KEY && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
+      continue-on-error: true
+      if: env.SSH_PRIVATE_KEY && env.REMOTE_SSH_HOST && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
       with:
-        host: ${{ env.REMOTE_HOST }}
+        host: ${{ env.REMOTE_SSH_HOST }}
         port: ${{ env.REMOTE_PORT }}
         username: root
         key: ${{ env.SSH_PRIVATE_KEY }}
@@ -464,9 +475,10 @@ jobs:
 
     - name: Upload website index page
       uses: appleboy/scp-action@master
-      if: env.SSH_PRIVATE_KEY && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
+      continue-on-error: true
+      if: env.SSH_PRIVATE_KEY && env.REMOTE_SSH_HOST && env.REMOTE_HOST && ! contains(github.event.action, 'noser')
       with:
-        host: ${{ env.REMOTE_HOST }}
+        host: ${{ env.REMOTE_SSH_HOST }}
         port: ${{ env.REMOTE_PORT }}
         username: root
         key: ${{ env.SSH_PRIVATE_KEY }}
