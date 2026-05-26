@@ -433,7 +433,7 @@ jobs:
           -H "Authorization: Bearer ${{ secrets.AGGREGATE_FEED_TOKEN }}" \
           -H "Accept: application/vnd.github+json" \
           https://api.github.com/repos/kenzok8/openwrt-clashoo/actions/workflows/aggregate-feed.yml/dispatches \
-          -d '{"ref":"main"}'
+          -d '{"ref":"main"}' || echo "Aggregate trigger failed; scheduled workflow will retry."
 
     - name: Generate website index page
       if: ${{ ! contains(github.event.action, 'noser') }}
