@@ -374,7 +374,7 @@ jobs:
         B2_BASE_URL="${{ env.B2_PUBLIC_BASE_URL }}"
         [ -z "$B2_BASE_URL" ] && B2_BASE_URL="https://down.dllkids.xyz"
         echo -e "定时更新插件，推送发布 🎈:\n" >> release.txt
-        echo -e "[下载链接] (${B2_BASE_URL%/}/openwrt-feed/${{ env.SDK_VER }}/${{matrix.target}}/)\n" >> release.txt
+        echo -e "[下载链接] (${B2_BASE_URL%/}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/)\n" >> release.txt
         [ ${{ env.WETRANS }} ] && echo -e "[WeTransfer] (${{ env.WETRANS }} 🗽)\n" >> release.txt
         [ ${{ env.COWURL }} ] && echo -e "[奶牛上传] (${{ env.COWURL }} 🐮)\n" >> release.txt
         [ ${{ env.NOTICE }} ] && echo -e "${{ env.NOTICE }}" >> release.txt || true
@@ -419,11 +419,21 @@ jobs:
         hard_delete = true
         EOF
 
-        rclone copy packages/ "b2:${{ env.B2_BUCKET }}/openwrt-feed/${{ env.SDK_VER }}/${{matrix.target}}/" \
+        rclone copy packages/ "b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/" \
           --checksum \
           --fast-list \
           --transfers 8 \
           --checkers 16
+
+    - name: Trigger unified feed aggregation
+      if: ${{ ! contains(github.event.action, 'noser') }}
+      run: |
+        [ -n "${{ secrets.AGGREGATE_FEED_TOKEN }}" ] || { echo "No aggregate token, skip trigger"; exit 0; }
+        curl -fsSL -X POST \
+          -H "Authorization: Bearer ${{ secrets.AGGREGATE_FEED_TOKEN }}" \
+          -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/kenzok8/openwrt-clashoo/actions/workflows/aggregate-feed.yml/dispatches \
+          -d '{"ref":"main"}'
 
     - name: Generate website index page
       if: ${{ ! contains(github.event.action, 'noser') }}
@@ -434,15 +444,15 @@ jobs:
         TARGET_DIR="website-index/${{ env.SDK_VER }}/${{ matrix.target }}"
         mkdir -p "$TARGET_DIR"
         INDEX_FILE="${TARGET_DIR}/index.html"
-        LINK_PREFIX="${B2_BASE_URL%/}/openwrt-feed/${{ env.SDK_VER }}/${{ matrix.target }}"
-        RCLONE_REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/${{ env.SDK_VER }}/${{ matrix.target }}"
+        LINK_PREFIX="${B2_BASE_URL%/}/openwrt-feed/jell/${{ env.SDK_VER }}/${{ matrix.target }}"
+        RCLONE_REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{ matrix.target }}"
         {
           printf '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><meta http-equiv="x-ua-compatible" content="IE=edge">\n'
           printf '<title>OpenWrt固件与插件</title><meta name="viewport" content="width=device-width, initial-scale=1">\n'
           printf '<link rel="stylesheet" href="/Nginx-Fancyindex-Theme-dark/styles.css?v=20260224b">\n'
           printf '<script type="text/javascript" src="/Nginx-Fancyindex-Theme-dark/jquery.min.js"></script>\n'
           printf '</head><body class="theme-dark"><div id="raw_include_HEADER_md"></div>\n'
-          printf '<h1>OpenWrt固件插件: /openwrt-feed/%s/%s/</h1>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
+          printf '<h1>OpenWrt固件插件: /openwrt-feed/jell/%s/%s/</h1>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
           printf '<table id="list"><thead><tr><th style="width:55%%">File Name</th><th style="width:20%%">File Size</th><th style="width:25%%">Date</th></tr></thead><tbody>\n'
           printf '<tr><td class="link"><a href="../">Parent directory/</a></td><td class="size">-</td><td class="date">-</td></tr>\n'
           rclone lsf "$RCLONE_REMOTE/" --files-only --format pst --separator "$(printf '\t')" | sort | while IFS="$(printf '\t')" read -r name size mtime; do
@@ -483,7 +493,7 @@ jobs:
         key: ${{ env.SSH_PRIVATE_KEY }}
         script: |
           set -e
-          WEB_ROOT="/www/wwwroot/${{ env.REMOTE_HOST }}/openwrt-feed"
+          WEB_ROOT="/www/wwwroot/${{ env.REMOTE_HOST }}/openwrt-feed/jell"
           SRC="/tmp/compile-jell-feed-index/${{ github.run_id }}-${{ github.run_attempt }}/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
           DST="${WEB_ROOT}/${{ env.SDK_VER }}/${{ matrix.target }}"
           sudo mkdir -p "$DST"
