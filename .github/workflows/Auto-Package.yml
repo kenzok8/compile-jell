@@ -338,13 +338,14 @@ jobs:
         PKG_DIR="openwrt/bin/packages"
         if [ -d "$PKG_DIR" ]; then
           echo "Searching for packages in ${PKG_DIR} ..."
-          count=0
-          find "$PKG_DIR" -path "*/jell/*" \( -name '*.ipk' -o -name '*.apk' \) -type f | while IFS= read -r f; do
-            echo "  found: $f"
-            cp -v "$f" packages/
-            count=$((count + 1))
-          done
-          echo "Collected packages: $count"
+          find "$PKG_DIR" -path "*/jell/*" \( -name '*.ipk' -o -name '*.apk' \) -type f -exec cp -v {} packages/ \;
+
+          # 收集 SDK 自动生成的索引文件，供 apk/opkg update 使用
+          find "$PKG_DIR" -path "*/jell/*" \
+            \( -name 'Packages' -o -name 'Packages.gz' -o -name 'Packages.sig' \
+               -o -name 'packages.adb' -o -name 'packages.adb.*' \
+               -o -name 'APKINDEX*' \) \
+            -type f -exec cp -v {} packages/ \;
         else
           echo "WARNING: ${PKG_DIR} does not exist"
         fi
@@ -446,9 +447,17 @@ jobs:
 
         echo "Verifying upload ..."
         REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}"
-        remote_count=$(rclone lsf "$REMOTE" --files-only | wc -l)
+        remote_files=$(rclone lsf "$REMOTE" --files-only)
+        remote_count=$(echo "$remote_files" | grep -c . || true)
         echo "Remote has ${remote_count} files"
         [ "$remote_count" -gt 0 ] || { echo "ERROR: upload verification failed, no files at remote"; exit 1; }
+
+        # 验证索引文件是否上传成功（这样用户加 feed 后才能 apk update）
+        if echo "$remote_files" | grep -qE '^(packages\.adb|Packages\.gz)$'; then
+          echo "Index file present (feed is consumable)"
+        else
+          echo "WARNING: no packages.adb or Packages.gz at remote — feed will not be usable as third-party source"
+        fi
         echo "Upload verified OK"
 
     - name: Generate website index page
