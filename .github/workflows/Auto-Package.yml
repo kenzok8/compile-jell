@@ -461,7 +461,7 @@ jobs:
         echo "Upload verified OK"
 
     - name: Generate website index page
-      if: ${{ ! contains(github.event.action, 'noser') }}
+      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_B2_UPLOAD != 'true' }}
       run: |
         set -euo pipefail
         B2_BASE_URL="${{ env.B2_PUBLIC_BASE_URL }}"
@@ -495,7 +495,7 @@ jobs:
         } > "$INDEX_FILE"
 
     - name: Upload index.html to B2
-      if: ${{ ! contains(github.event.action, 'noser') }}
+      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_B2_UPLOAD != 'true' }}
       run: |
         set -euo pipefail
         INDEX_FILE="website-index/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
