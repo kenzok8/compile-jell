@@ -36,6 +36,12 @@ done
 ./scripts/feeds update -a
         rm -rf feeds/packages/lang/golang
         git clone https://github.com/kenzok8/golang -b 1.26 feeds/packages/lang/golang
+for dump in logs/feeds/jell/*/dump.txt; do
+  [ -f "$dump" ] || continue
+  bad_pkg="$(basename "$(dirname "$dump")")"
+  echo "WARNING: skipping $bad_pkg (Makefile broken)"
+  rm -rf "feeds/jell/$bad_pkg"
+done
 ./scripts/feeds install -a -p jell -f
 ./scripts/feeds install -a
 
