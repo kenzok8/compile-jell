@@ -333,14 +333,34 @@ jobs:
     - name: Organize files
       id: organize
       run: |
-        mkdir packages
-        mv -f openwrt/bin/packages/*/jell/* packages || true
-        mv -f openwrt/.config packages/${{matrix.target}}.config || true
-        # cp -Rf openwrt/bin/packages/*/packages/python3* packages/
+        mkdir -p packages
+
+        PKG_DIR="openwrt/bin/packages"
+        if [ -d "$PKG_DIR" ]; then
+          echo "Searching for packages in ${PKG_DIR} ..."
+          count=0
+          find "$PKG_DIR" -path "*/jell/*" \( -name '*.ipk' -o -name '*.apk' \) -type f | while IFS= read -r f; do
+            echo "  found: $f"
+            cp -v "$f" packages/
+            count=$((count + 1))
+          done
+          echo "Collected packages: $count"
+        else
+          echo "WARNING: ${PKG_DIR} does not exist"
+        fi
+
+        cp -f openwrt/.config "packages/${{matrix.target}}.config" 2>/dev/null || true
+
+        pkg_count=$(find packages -maxdepth 1 -type f \( -name '*.ipk' -o -name '*.apk' \) 2>/dev/null | wc -l)
+        echo "Total packages: ${pkg_count}"
+        if [ "$pkg_count" -eq 0 ]; then
+          echo "SKIP_B2_UPLOAD=true" >> $GITHUB_ENV
+        fi
+
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV
         Emoji=("🍂" "🐾" "🌸" "🐌" "🌿" "🐤" "💦" "💤" "💭" "⛅" "🌈" "🔥" "🍭" "🎉" "🤞" "✨" "🎁" "🎈" "🎨" "💋" "🍓" "🍕" "🍉" "💐" "🌴" "🙈" "🤡" "🍡")
         echo "EMOJI=${Emoji[$[$RANDOM % ${#Emoji[@]}]]}" >> $GITHUB_ENV
-        if [[ $(ls -l openwrt/error* | grep "^-" | wc -l) -le 0 ]]; then
+        if [[ $(ls -l openwrt/error* 2>/dev/null | grep "^-" | wc -l) -le 0 ]]; then
            echo "NAME=${Emoji[$[$RANDOM % ${#Emoji[@]}]]} ${{ env.date2 }} ${{matrix.target}} ${{ env.EMOJI }}" >> $GITHUB_ENV
         else
            echo "NAME=🌸 ${{ env.date2 }} ${{matrix.target}} 🌸" >> $GITHUB_ENV
@@ -402,7 +422,7 @@ jobs:
         path: packages
 
     - name: Upload packages to Backblaze B2
-      if: ${{ ! contains(github.event.action, 'noser') }}
+      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_B2_UPLOAD != 'true' }}
       run: |
         set -euo pipefail
         [ -n "${{ env.B2_KEY_ID }}" ] || { echo "Missing B2_KEY_ID"; exit 1; }
@@ -419,21 +439,17 @@ jobs:
         hard_delete = true
         EOF
 
+        pkg_count=$(find packages -maxdepth 1 -type f \( -name '*.ipk' -o -name '*.apk' \) | wc -l)
+        echo "Uploading ${pkg_count} packages to openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/ ..."
         rclone copy packages/ "b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/" \
-          --checksum \
-          --fast-list \
-          --transfers 8 \
-          --checkers 16
+          --checksum --fast-list --transfers 8 --checkers 16
 
-    - name: Trigger unified feed aggregation
-      if: ${{ ! contains(github.event.action, 'noser') }}
-      run: |
-        [ -n "${{ secrets.AGGREGATE_FEED_TOKEN }}" ] || { echo "No aggregate token, skip trigger"; exit 0; }
-        curl -fsSL -X POST \
-          -H "Authorization: Bearer ${{ secrets.AGGREGATE_FEED_TOKEN }}" \
-          -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/kenzok8/openwrt-clashoo/actions/workflows/aggregate-feed.yml/dispatches \
-          -d '{"ref":"main"}' || echo "Aggregate trigger failed; scheduled workflow will retry."
+        echo "Verifying upload ..."
+        REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}"
+        remote_count=$(rclone lsf "$REMOTE" --files-only | wc -l)
+        echo "Remote has ${remote_count} files"
+        [ "$remote_count" -gt 0 ] || { echo "ERROR: upload verification failed, no files at remote"; exit 1; }
+        echo "Upload verified OK"
 
     - name: Generate website index page
       if: ${{ ! contains(github.event.action, 'noser') }}
