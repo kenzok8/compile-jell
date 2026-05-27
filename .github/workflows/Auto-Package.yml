@@ -485,6 +485,17 @@ jobs:
           printf '</body></html>\n'
         } > "$INDEX_FILE"
 
+    - name: Upload index.html to B2
+      if: ${{ ! contains(github.event.action, 'noser') }}
+      run: |
+        set -euo pipefail
+        INDEX_FILE="website-index/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
+        [ -f "$INDEX_FILE" ] || { echo "no index.html, skip"; exit 0; }
+        rclone copyto "$INDEX_FILE" \
+          "b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/index.html" \
+          --checksum
+        echo "index.html uploaded to B2"
+
     - name: Upload website index page to VPS temp
       uses: appleboy/scp-action@master
       continue-on-error: true
