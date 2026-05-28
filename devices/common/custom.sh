@@ -39,8 +39,9 @@ done
 for dump in logs/feeds/jell/*/dump.txt; do
   [ -f "$dump" ] || continue
   bad_pkg="$(basename "$(dirname "$dump")")"
-  echo "WARNING: skipping $bad_pkg (Makefile broken)"
-  rm -rf "feeds/jell/$bad_pkg"
+  echo "::group::WARNING: $bad_pkg has Makefile warnings (kept anyway)"
+  cat "$dump" || true
+  echo "::endgroup::"
 done
 ./scripts/feeds install -a -p jell -f
 ./scripts/feeds install -a
