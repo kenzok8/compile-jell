@@ -473,8 +473,8 @@ jobs:
         {
           printf '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><meta http-equiv="x-ua-compatible" content="IE=edge">\n'
           printf '<title>OpenWrt固件与插件</title><meta name="viewport" content="width=device-width, initial-scale=1">\n'
-          printf '<link rel="stylesheet" href="/Nginx-Fancyindex-Theme-dark/styles.css?v=20260224b">\n'
-          printf '<script type="text/javascript" src="/Nginx-Fancyindex-Theme-dark/jquery.min.js"></script>\n'
+          printf '<link rel="stylesheet" href="https://down.dllkids.xyz/Nginx-Fancyindex-Theme-dark/styles.css?v=20260224b">\n'
+          printf '<script type="text/javascript" src="https://down.dllkids.xyz/Nginx-Fancyindex-Theme-dark/jquery.min.js"></script>\n'
           printf '</head><body class="theme-dark"><div id="raw_include_HEADER_md"></div>\n'
           printf '<h1>OpenWrt固件插件: /openwrt-feed/jell/%s/%s/</h1>\n' "${{ env.SDK_VER }}" "${{ matrix.target }}"
           printf '<table id="list"><thead><tr><th style="width:55%%">File Name</th><th style="width:20%%">File Size</th><th style="width:25%%">Date</th></tr></thead><tbody>\n'
@@ -488,8 +488,8 @@ jobs:
           printf '<footer><a href="https://github.com/kenzok8/openwrt_Build">GitHub仓库</a></footer>\n'
           printf '<footer><a href="https://github.com/kenzok8">作者kenzo</a></footer>\n'
           printf '<script src="https://unpkg.com/xregexp/xregexp-all.js"></script>\n'
-          printf '<script type="text/javascript" src="/Nginx-Fancyindex-Theme-dark/addNginxFancyIndexForm.js?v=20260224h"></script>\n'
-          printf '<script type="text/javascript" src="/Nginx-Fancyindex-Theme-dark/showdown.min.js"></script>\n'
+          printf '<script type="text/javascript" src="https://down.dllkids.xyz/Nginx-Fancyindex-Theme-dark/addNginxFancyIndexForm.js?v=20260224h"></script>\n'
+          printf '<script type="text/javascript" src="https://down.dllkids.xyz/Nginx-Fancyindex-Theme-dark/showdown.min.js"></script>\n'
           printf '</body></html>\n'
         } > "$INDEX_FILE"
 
