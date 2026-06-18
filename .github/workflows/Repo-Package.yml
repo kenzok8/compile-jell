@@ -47,7 +47,7 @@ jobs:
         [[ "$fpkg" && ! "$during" ]] || {
           [ "$during" ] || during="1.05"
           durings=`echo "$during*60*60*24" | bc`
-          gitdate=$(date -d "$gitdate" +%s)
+          gitdate=$(date -d "$gitdate" +%s 2>/dev/null || date +%s)
           now=$(date -d "$(date)" +%s)
           [ "$during" ] || during="1.05"
           durings=`echo "$during*60*60*24" | bc`
@@ -55,7 +55,7 @@ jobs:
             exit;
           fi
         gitdate=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/jell/actions/runs" | jq -r '.workflow_runs[0].created_at') || true
-        gitdate=$(date -d "$gitdate" +%s)
+        gitdate=$(date -d "$gitdate" +%s 2>/dev/null || date +%s)
         now=$(date -d "$(date)" +%s)
         if [[ $(expr $gitdate + 180) -lt $now ]]; then
         curl -X POST https://api.github.com/repos/kenzok8/jell/dispatches \
