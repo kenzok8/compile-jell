@@ -28,11 +28,11 @@ env:
   PASSWORD: ${{ secrets.PASSWORD }}
   TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-  B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
-  B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-  B2_BUCKET: ${{ secrets.B2_BUCKET }}
-  B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
-  B2_PATH_PREFIX: ${{ secrets.B2_PATH_PREFIX }}
+  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  R2_BUCKET: ${{ secrets.R2_BUCKET }}
+  R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+  R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
   TZ: Asia/Shanghai
 
 jobs:
@@ -353,7 +353,7 @@ jobs:
         pkg_count=$(find packages -maxdepth 1 -type f \( -name '*.ipk' -o -name '*.apk' \) 2>/dev/null | wc -l)
         echo "Total packages: ${pkg_count}"
         if [ "$pkg_count" -eq 0 ]; then
-          echo "SKIP_B2_UPLOAD=true" >> $GITHUB_ENV
+          echo "SKIP_R2_UPLOAD=true" >> $GITHUB_ENV
         fi
 
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV
@@ -390,10 +390,10 @@ jobs:
       if: env.REPO_TOKEN && env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true'
       continue-on-error: true
       run: |
-        B2_BASE_URL="${{ env.B2_PUBLIC_BASE_URL }}"
-        [ -z "$B2_BASE_URL" ] && B2_BASE_URL="https://down.dllkids.xyz"
+        R2_BASE_URL="${{ env.R2_PUBLIC_BASE_URL }}"
+        [ -z "$R2_BASE_URL" ] && R2_BASE_URL="https://down.dllkids.xyz"
         echo -e "定时更新插件，推送发布 🎈:\n" >> release.txt
-        echo -e "[下载链接] (${B2_BASE_URL%/}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/)\n" >> release.txt
+        echo -e "[下载链接] (${R2_BASE_URL%/}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/)\n" >> release.txt
         [ ${{ env.WETRANS }} ] && echo -e "[WeTransfer] (${{ env.WETRANS }} 🗽)\n" >> release.txt
         [ ${{ env.COWURL }} ] && echo -e "[奶牛上传] (${{ env.COWURL }} 🐮)\n" >> release.txt
         [ ${{ env.NOTICE }} ] && echo -e "${{ env.NOTICE }}" >> release.txt || true
@@ -421,31 +421,34 @@ jobs:
         name: ${{ env.date3 }} ${{matrix.target}}
         path: packages
 
-    - name: Upload packages to Backblaze B2
-      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_B2_UPLOAD != 'true' }}
+    - name: Upload packages to Cloudflare R2
+      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_R2_UPLOAD != 'true' }}
       run: |
         set -euo pipefail
-        [ -n "${{ env.B2_KEY_ID }}" ] || { echo "Missing B2_KEY_ID"; exit 1; }
-        [ -n "${{ env.B2_APPLICATION_KEY }}" ] || { echo "Missing B2_APPLICATION_KEY"; exit 1; }
-        [ -n "${{ env.B2_BUCKET }}" ] || { echo "Missing B2_BUCKET"; exit 1; }
+        [ -n "${{ env.R2_ACCESS_KEY_ID }}" ] || { echo "Missing R2_ACCESS_KEY_ID"; exit 1; }
+        [ -n "${{ env.R2_SECRET_ACCESS_KEY }}" ] || { echo "Missing R2_SECRET_ACCESS_KEY"; exit 1; }
+        [ -n "${{ env.R2_BUCKET }}" ] || { echo "Missing R2_BUCKET"; exit 1; }
 
         curl -fsSL https://rclone.org/install.sh | sudo bash
         mkdir -p ~/.config/rclone
         cat > ~/.config/rclone/rclone.conf <<EOF
-        [b2]
-        type = b2
-        account = ${{ env.B2_KEY_ID }}
-        key = ${{ env.B2_APPLICATION_KEY }}
-        hard_delete = true
+        [r2]
+        type = s3
+        provider = Cloudflare
+        access_key_id = ${{ env.R2_ACCESS_KEY_ID }}
+        secret_access_key = ${{ env.R2_SECRET_ACCESS_KEY }}
+        endpoint = ${R2_ENDPOINT}
+        acl = private
+        no_check_bucket = true
         EOF
 
         pkg_count=$(find packages -maxdepth 1 -type f \( -name '*.ipk' -o -name '*.apk' \) | wc -l)
         echo "Uploading ${pkg_count} packages to openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/ ..."
-        rclone copy packages/ "b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/" \
+        rclone copy packages/ "r2:${{ env.R2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/" \
           --checksum --fast-list --transfers 8 --checkers 16
 
         echo "Verifying upload ..."
-        REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}"
+        REMOTE="r2:${{ env.R2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}"
         remote_files=$(rclone lsf "$REMOTE" --files-only)
         remote_count=$(echo "$remote_files" | grep -c . || true)
         echo "Remote has ${remote_count} files"
@@ -460,16 +463,16 @@ jobs:
         echo "Upload verified OK"
 
     - name: Generate website index page
-      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_B2_UPLOAD != 'true' }}
+      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_R2_UPLOAD != 'true' }}
       run: |
         set -euo pipefail
-        B2_BASE_URL="${{ env.B2_PUBLIC_BASE_URL }}"
-        [ -z "$B2_BASE_URL" ] && B2_BASE_URL="https://down.dllkids.xyz"
+        R2_BASE_URL="${{ env.R2_PUBLIC_BASE_URL }}"
+        [ -z "$R2_BASE_URL" ] && R2_BASE_URL="https://down.dllkids.xyz"
         TARGET_DIR="website-index/${{ env.SDK_VER }}/${{ matrix.target }}"
         mkdir -p "$TARGET_DIR"
         INDEX_FILE="${TARGET_DIR}/index.html"
-        LINK_PREFIX="${B2_BASE_URL%/}/openwrt-feed/jell/${{ env.SDK_VER }}/${{ matrix.target }}"
-        RCLONE_REMOTE="b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{ matrix.target }}"
+        LINK_PREFIX="${R2_BASE_URL%/}/openwrt-feed/jell/${{ env.SDK_VER }}/${{ matrix.target }}"
+        RCLONE_REMOTE="r2:${{ env.R2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{ matrix.target }}"
         {
           printf '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><meta http-equiv="x-ua-compatible" content="IE=edge">\n'
           printf '<title>OpenWrt固件与插件</title><meta name="viewport" content="width=device-width, initial-scale=1">\n'
@@ -493,16 +496,16 @@ jobs:
           printf '</body></html>\n'
         } > "$INDEX_FILE"
 
-    - name: Upload index.html to B2
-      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_B2_UPLOAD != 'true' }}
+    - name: Upload index.html to R2
+      if: ${{ ! contains(github.event.action, 'noser') && env.SKIP_R2_UPLOAD != 'true' }}
       run: |
         set -euo pipefail
         INDEX_FILE="website-index/${{ env.SDK_VER }}/${{ matrix.target }}/index.html"
         [ -f "$INDEX_FILE" ] || { echo "no index.html, skip"; exit 0; }
         rclone copyto "$INDEX_FILE" \
-          "b2:${{ env.B2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/index.html" \
+          "r2:${{ env.R2_BUCKET }}/openwrt-feed/jell/${{ env.SDK_VER }}/${{matrix.target}}/index.html" \
           --checksum
-        echo "index.html uploaded to B2"
+        echo "index.html uploaded to R2"
 
     - name: Upload website index page to VPS temp
       uses: appleboy/scp-action@master
