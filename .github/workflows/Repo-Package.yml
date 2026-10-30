@@ -97,24 +97,16 @@ jobs:
         retain_days: 5
         keep_minimum_runs: 1
 
-    - name: Remove old Releases
+    - name: Preview old Releases cleanup
       env:
         GH_TOKEN: ${{ secrets.TOKEN_kenzo }}
         GH_REPO: ${{ github.repository }}
       shell: bash
       run: |
         set -euo pipefail
-        # Keep the newest 30 releases; do not delete tags for retained releases.
-        gh api --paginate --slurp "repos/${GH_REPO}/releases?per_page=100" \\
-          | jq -r 'add | sort_by(.created_at) | reverse | .[30:][]? | [.id, .tag_name] | @tsv' \\
-          | while IFS=
-\\t' read -r release_id tag; do
-              [[ -n "${release_id}" ]] || continue
-              echo "Deleting old release ID ${release_id} (tag: ${tag})"
-              gh api -X DELETE "repos/${GH_REPO}/releases/${release_id}"
-              if [[ -n "${tag}" ]]; then
-                encoded_tag="$(jq -rn --arg t "${tag}" '$t|@uri')"
-                gh api -X DELETE "repos/${GH_REPO}/git/refs/tags/${encoded_tag}" || \\
-                  echo "::warning::Unable to delete tag ${tag}"
-              fi
+        # Dry run only: do not delete releases or tags.
+        gh api --paginate --slurp "repos/${GH_REPO}/releases?per_page=100" \
+          | jq -r '[.[][]] | sort_by(.created_at) | reverse | .[30:][]? | [.id, .tag_name] | @tsv' \
+          | while IFS=$'\t' read -r release_id tag; do
+              echo "Would delete release ID ${release_id} (tag: ${tag})"
             done
