@@ -247,9 +247,15 @@ jobs:
         else
           echo 'CONFIG_USE_APK=n' >> .config
         fi
+        # Wait for small-package to finish syncing: poll its latest run once a
+        # minute (was every 5s — 12 calls/min per job, which burned the shared
+        # 5000/h API quota when several targets ran together). Give up after
+        # 2h instead of waiting forever.
+        wait_deadline=$((SECONDS + 7200))
         status=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/small-package/actions/runs" | jq -r '.workflow_runs[0].status')
-        while [ "$status" == "in_progress" ];do
-          sleep 5
+        while [ "$status" == "in_progress" ]; do
+          [ "$SECONDS" -lt "$wait_deadline" ] || { echo "timed out waiting for small-package after 2h (status: $status)" >&2; exit 1; }
+          sleep 60
           status=$(curl -H "Authorization: token ${{ env.REPO_TOKEN }}" -s "https://api.github.com/repos/kenzok8/small-package/actions/runs" | jq -r '.workflow_runs[0].status')
         done
         make defconfig
